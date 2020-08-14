@@ -18,7 +18,7 @@ However, it differs from it in the sense that
 
 # Motivation
 
-I was a tad bothered by a few things about pass' design, like
+I was a tad bothered by a few things about pass, like
 
 - Storing each password in an encrypted file, where the file name is supposed to be the name
 of the service it's for. This means that anyone with read access to your filesystem can know at a
