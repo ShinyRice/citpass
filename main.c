@@ -2,16 +2,18 @@
 
 int main(int argc, char *argv[])
 {
-  // First, it's necessary to know how many arguments have been passed
+  // First, it's necessary to know how many arguments have been passed. This first case below
+  // executes when just the binary's name has been invoked,
   if(argc == 1) {
     printf("citpass requires an argument. Possible arguments are:\n");
-    printf("init - Create the file where passwords will be stored, located at $HOME/.cpasswords\n");
+    printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
     printf("add - Add a password along with associated information to said file\n");
     printf("rm - Remove a password along with associated information from the file\n");
     printf("get - Retrieve a password from the file\n");
   }
   else if(argc == 2){
-  // Now, it's necessary to parse command line arguments passed to the program, so
+  // This is the case where the binary's name plus another argument has been passed.
+  // Now, it's necessary to parse the command line argument passed to the program, so
   if (argv[1] == "init") {
 
   // Initialization
@@ -70,7 +72,7 @@ int main(int argc, char *argv[])
   else {
     printf("Invalid argument. Please provide a valid one.\n");
     printf("Possible arguments are:\n");
-    printf("init - Create the file where passwords will be stored, located at $HOME/.cpasswords\n");
+    printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
     printf("add - Add a password along with associated information to said file\n");
     printf("rm - Remove a password along with associated information from the file\n");
     printf("get - Retrieve a password from the file\n");
