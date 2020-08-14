@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 int main(int argc, char *argv[])
 {
@@ -12,59 +13,62 @@ int main(int argc, char *argv[])
     printf("get - Retrieve a password from the file\n");
   }
   else if(argc == 2){
-  // This is the case where the binary's name plus another argument has been passed.
-  // Now, it's necessary to parse the command line argument passed to the program, so
-  if (argv[1] == "init") {
+    // This is the case where the binary's name plus another argument has been passed.
+    // Now, it's necessary to parse the command line argument passed to the program, so
 
-  // Initialization
-  printf("ass");
-  /* Empty file creation */
+    int arginit = strncmp(argv[1], "init", 4);
+    int argadd = strncmp(argv[1], "add", 3);
+    int argrm = strncmp(argv[1], "rm", 2);
+    int argget = strncmp(argv[1], "get", 3);
 
-  /* File encryption */
+    if (arginit == 0) {
+    // Initialization
 
-  }
-  else if(argv[1] == 'add') {
+    /* Empty file creation */
 
-  // Addition of password
+    /* File encryption */
 
-  /* File unencryption */
+    }
+    else if(argadd == 0) {
+    // Addition of password
 
-  /* Appending an empty entry to the end of the database file */
+    /* File unencryption */
 
-  /* User now fills the entry with information */
+    /* Appending an empty entry to the end of the database file */
 
-  /* File encryption */
+    /* User now fills the entry with information */
 
-  }
-  else if(argv[1] == 'rm') {
+    /* File encryption */
 
-  // Removal of password
+    }
+    else if(argrm == 0) {
+    // Removal of password
 
-  /* File unencryption */
+    /* File unencryption */
 
-  /* Print out list of entries */
+    /* Print out list of entries */
 
-  /* User selects entry */
+    /* User selects entry */
 
-  /* Entry is deleted */
+    /* Entry is deleted */
 
-  /* File encryption */
+    /* File encryption */
 
-  }
-  else if(argv[1] == 'get') {
+   }
+    else if(argget == 0) {
+    // Retrieval of password
 
-  // Retrieval of password
+    /* File unencryption */
 
-  /* File unencryption */
+    /* Print out list of entries */
 
-  /* Print out list of entries */
+    /* User selects entry */
 
-  /* User selects entry */
+    /* Password is printed to stdout */
 
-  /* Password is printed to stdout */
+    /* File encryption */
 
-  /* File encryption */
-  }
+    }
   }
   else if(argc > 2) {
       printf("Too many arguments supplied.\n");
