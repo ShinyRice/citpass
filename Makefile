@@ -6,4 +6,4 @@ citpass:
 .PHONY: clean
 clean:
 	rm citpass
-	rm *.o
+#	rm *.o

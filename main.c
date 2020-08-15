@@ -15,14 +15,15 @@ int main(int argc, char *argv[])
   else if(argc == 2){
     // This is the case where the binary's name plus another argument has been passed.
     // Now, it's necessary to parse the command line argument passed to the program, so
-
-    int arginit = strncmp(argv[1], "init", 4);
-    int argadd = strncmp(argv[1], "add", 3);
-    int argrm = strncmp(argv[1], "rm", 2);
-    int argget = strncmp(argv[1], "get", 3);
+    int arginit = strncmp(argv[1], "init", 5);
+    int argadd = strncmp(argv[1], "add", 5);
+    int argrm = strncmp(argv[1], "rm", 5);
+    int argget = strncmp(argv[1], "get", 5);
 
     if (arginit == 0) {
     // Initialization
+
+      printf("Placeholder for init.\n");
 
     /* Empty file creation */
 
@@ -31,6 +32,8 @@ int main(int argc, char *argv[])
     }
     else if(argadd == 0) {
     // Addition of password
+
+      printf("Placeholder for add.\n");
 
     /* File unencryption */
 
@@ -44,6 +47,8 @@ int main(int argc, char *argv[])
     else if(argrm == 0) {
     // Removal of password
 
+      printf("Placeholder for rm.\n");
+
     /* File unencryption */
 
     /* Print out list of entries */
@@ -54,9 +59,11 @@ int main(int argc, char *argv[])
 
     /* File encryption */
 
-   }
+    }
     else if(argget == 0) {
     // Retrieval of password
+
+      printf("Placeholder for get.\n");
 
     /* File unencryption */
 
@@ -69,17 +76,17 @@ int main(int argc, char *argv[])
     /* File encryption */
 
     }
+    else {
+      printf("Invalid argument. Please provide a valid one.\n");
+      printf("Possible arguments are:\n");
+      printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
+      printf("add - Add a password along with associated information to said file\n");
+      printf("rm - Remove a password along with associated information from the file\n");
+      printf("get - Retrieve a password from the file\n");
+    }
   }
   else if(argc > 2) {
       printf("Too many arguments supplied.\n");
-  }
-  else {
-    printf("Invalid argument. Please provide a valid one.\n");
-    printf("Possible arguments are:\n");
-    printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
-    printf("add - Add a password along with associated information to said file\n");
-    printf("rm - Remove a password along with associated information from the file\n");
-    printf("get - Retrieve a password from the file\n");
   }
   return 0;
 }
