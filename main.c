@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     printf("citpass requires an argument. Possible arguments are:\n");
     printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
     printf("add - Add a password along with associated information to said file\n");
+    printf("list - List all entries for which there is a password\n");
     printf("rm - Remove a password along with associated information from the file\n");
     printf("get - Retrieve a password from the file\n");
   }
@@ -17,6 +18,7 @@ int main(int argc, char *argv[])
     // Now, it's necessary to parse the command line argument passed to the program, so
     int arginit = strncmp(argv[1], "init", 5);
     int argadd = strncmp(argv[1], "add", 5);
+    int arglist = strncmp(argv[1], "list", 5);
     int argrm = strncmp(argv[1], "rm", 5);
     int argget = strncmp(argv[1], "get", 5);
 
@@ -34,6 +36,20 @@ int main(int argc, char *argv[])
     // Addition of password
 
       printf("Placeholder for add.\n");
+
+    /* File unencryption */
+
+    /* Appending an empty entry to the end of the database file */
+
+    /* User now fills the entry with information */
+
+    /* File encryption */
+
+    }
+    else if(arglist == 0) {
+    // Addition of password
+
+      printf("Placeholder for list.\n");
 
     /* File unencryption */
 
@@ -81,11 +97,14 @@ int main(int argc, char *argv[])
       printf("Possible arguments are:\n");
       printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
       printf("add - Add a password along with associated information to said file\n");
+      printf("list - List all entries for which there is a password\n");
       printf("rm - Remove a password along with associated information from the file\n");
       printf("get - Retrieve a password from the file\n");
     }
   }
   else if(argc > 2) {
+    // citpass will require a second argument when retrieving and removing a password, the title of such a password.
+    //
       printf("Too many arguments supplied.\n");
   }
   return 0;
