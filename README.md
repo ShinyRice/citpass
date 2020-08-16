@@ -22,17 +22,7 @@ For now, I've only thought of making it do five things,
 
 - Creating the file where passwords will be stored, which is hardcoded for now to $HOME/.local/share/citpass/passwords
 
-- Adding passwords to this file. Each password will have metadata associated to it stored in the file too, with the following entry format, taken after KeePass,
-
-Title:
-
-Username:
-
-Password:
-
-URL:
-
-Notes:
+- Adding passwords to this file. Each password will have metadata associated to it stored in the file too, with a format taken after KeePass, storing title, username, password, URL and notes about the service
 
 - Listing passwords
 
