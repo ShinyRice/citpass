@@ -1,4 +1,4 @@
-# citpass
+# citpass - "See it pass"
 
 # I've hardly got any code written, I'm not sure how long it will take me to get this to a usable state. Don't depend on this for now. 
 
@@ -15,6 +15,20 @@ However, it differs from it in the sense that
 - It stores all passwords and relevant data associated to each password in a single file
 
 - Written in C99
+
+# What does it do?
+
+For now, I've only thought of making it do five things
+
+- Creating the file where passwords will be stored, which is hardcoded for now to $HOME/.local/share/citpass/passwords
+
+- Adding passwords to this file. Each password will have metadata associated to it stored in the file as well
+
+- Listing passwords
+
+- Removing passwords and associated metadata
+
+- Retrieving a password from the file. For now, there's only the option of printing it to stdout, but when this program is far along enough, I plan on piping it directly to clipboard
 
 # Motivation
 
