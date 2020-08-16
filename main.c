@@ -1,12 +1,14 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 int main(int argc, char *argv[])
 {
+  char* home = getenv("HOME");
   /* First, it's necessary to know how many arguments have been passed. This first case below
   * executes when just the binary's name has been invoked, */
-  if(argc == 1) {
+  if (argc == 1) {
     printf("citpass requires an argument. Possible arguments are:\n");
     printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
     printf("add - Add a password along with associated information to said file\n");
@@ -14,7 +16,7 @@ int main(int argc, char *argv[])
     printf("rm - Remove a password along with associated information from the file\n");
     printf("get - Retrieve a password from the file\n");
   }
-  else if(argc == 2){
+  else if (argc == 2) {
     /* This is the case where the binary's name plus another argument has been passed.
     * Now, it's necessary to parse the command line argument passed to the program, so */
     int arginit = strncmp(argv[1], "init", 5);
@@ -28,19 +30,22 @@ int main(int argc, char *argv[])
       * Before doing anything, we need to know whether or not the application folder in ~/.local/share
       * and the file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
       */
-      if(access("/home/shinyrice/.local/share/citpass", F_OK) != -1) {
-        printf("The folder at /home/shinyrice/.local/share/citpass exists.\n");
+      char* folderpath = "/.local/share/citpass";
+      folderpath = strcat(home, folderpath);
+
+      if (access(folderpath, F_OK) != -1) {
+        printf("The folder at %s exists.\n", folderpath);
       }
       else {
-        printf("The folder at /home/shinyrice/.local/share/citpass doesn't exist.\n");
-        printf("Creating it.");
+        printf("The folder at %s doesn't exist.\n", folderpath);
+        printf("Creating it.\n");
         /* Empty file creation */
       }
 
     /* File encryption */
 
     }
-    else if(argadd == 0) {
+    else if (argadd == 0) {
     /* Addition of password */
 
       printf("Placeholder for add.\n");
@@ -54,7 +59,7 @@ int main(int argc, char *argv[])
     /* File encryption */
 
     }
-    else if(arglist == 0) {
+    else if (arglist == 0) {
     /* Addition of password */
 
       printf("Placeholder for list.\n");
@@ -68,7 +73,7 @@ int main(int argc, char *argv[])
     /* File encryption */
 
     }
-    else if(argrm == 0) {
+    else if (argrm == 0) {
     /* Removal of password */
 
       printf("Placeholder for rm.\n");
@@ -84,7 +89,7 @@ int main(int argc, char *argv[])
     /* File encryption */
 
     }
-    else if(argget == 0) {
+    else if (argget == 0) {
     /* Retrieval of password */
 
       printf("Placeholder for get.\n");
@@ -110,7 +115,7 @@ int main(int argc, char *argv[])
       printf("get - Retrieve a password from the file\n");
     }
   }
-  else if(argc > 2) {
+  else if (argc > 2) {
     /* citpass will require a second argument when retrieving and removing a password, the title of such a password.
     * As such, it'll be here when the time comes. */
       printf("Too many arguments supplied.\n");
