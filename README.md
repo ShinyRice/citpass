@@ -10,15 +10,15 @@ It is similar to pass in the sense that;
 
 - Aims to be lean
 
-However, it differs from it in the sense that
+However, it differs from it, by
 
-- It stores all passwords and relevant data associated to each password in a single file
+- Storing all passwords and relevant data associated to each in a single file
 
-- Written in C99
+- Being written in C99
 
 # What does it do?
 
-For now, I've only thought of making it do five things
+For now, I've only thought of making it do five things,
 
 - Creating the file where passwords will be stored, which is hardcoded for now to $HOME/.local/share/citpass/passwords
 
