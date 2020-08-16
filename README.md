@@ -25,9 +25,13 @@ For now, I've only thought of making it do five things,
 - Adding passwords to this file. Each password will have metadata associated to it stored in the file too, with the following entry format, taken after KeePass,
 
 Title:
+
 Username:
+
 Password:
+
 URL:
+
 Notes:
 
 - Listing passwords
