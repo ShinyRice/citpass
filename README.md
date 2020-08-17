@@ -1,6 +1,6 @@
 # citpass - "See it pass"
 
-# I've hardly got any code written, I'm not sure how long it will take me to get this to a usable state. Don't depend on this for now. 
+**I've hardly got any code written, I'm not sure how long it will take me to get this to a usable state. Don't depend on this for now.**
 
 This is a simple password manager for Linux, inspired in part by pass.
 
@@ -43,8 +43,8 @@ somewhat intends the file name to be the service name, so I wanted to try making
 saner defaults. Saner to me, at least.
 
 - Donenfeld claims pass doesn't have as much bloat as other password managers. While that might be true
-(I have no idea, haven't taken a look at its source) pass needs Bash, and Bash *is* bloat, to me and
-to other people. As this is written in C, obviously this doesn't need a shell.
+(I have no idea, haven't taken a look at its source, but since it doesn't do much, I can assume it probably isn't)
+pass needs Bash, and Bash *is* bloat, to me and to other people. As this is written in C, obviously this doesn't depend on a particular shell.
 
 About that last point, yes, I'm aware there's spm, written in POSIX shell. Its design is, however,
 flawed in the same way I described in the first point.
@@ -61,7 +61,7 @@ In your shell, change directory to the source folder, and run
 $ make
 ```
 
-Then, as root, (this hasn't even been done yet)
+Then, as root,
 
 ```
 # make install
