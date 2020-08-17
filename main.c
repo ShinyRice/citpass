@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[])
 {
-  char* home = getenv("HOME");
+  char* homepath = getenv("HOME");
   /* First, it's necessary to know how many arguments have been passed. This first case below
   * executes when just the binary's name has been invoked, */
   if (argc == 1) {
@@ -29,17 +29,24 @@ int main(int argc, char *argv[])
       /* Initialization
       * Before doing anything, we need to know whether or not the application folder in ~/.local/share
       * and the file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
+      * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
       */
       char* folderpath = "/.local/share/citpass";
-      folderpath = strcat(home, folderpath);
-
+      folderpath = strcat(homepath, folderpath);
+      /* Here, we check if the folder exists, */
       if (access(folderpath, F_OK) != -1) {
         printf("The folder at %s exists.\n", folderpath);
+        char* filepath = strcat(folderpath, "/passwords");
+        if (access(filepath, F_OK) != -1) {
+          /* And here, we check if the file within exists as well, */
+          printf("The file at %s exists as well. No action necessary.\n", filepath);
+        }
+        else {
+          printf("The file doesn't exist. Creating it.\n");
+        }
       }
       else {
-        printf("The folder at %s doesn't exist.\n", folderpath);
-        printf("Creating it.\n");
-        /* Empty file creation */
+        printf("The folder at %s doesn't exist. Creating it.\n", folderpath);
       }
 
     /* File encryption */
