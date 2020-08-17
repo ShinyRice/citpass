@@ -52,7 +52,7 @@ depend on a particular shell.
 
 - I honestly don't think that a password manager needs to manage any sort of synchronization between computers.
 Even if said synchronization is mostly delegated to a separate program, as many things in pass are.
-Well, folders *do* lend themselves to synchronizing with git, but in this manager's case, having a git
+Well, folders *do* lend themselves to synchronizing with git, but in citpass' case, having a git
 repo for a single file/folder with one file doesn't make a lot of sense.
 
 About that last point, yes, I'm aware there's spm, written in POSIX shell. Its design is, however,
