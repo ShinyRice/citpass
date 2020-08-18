@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     printf("add - Add a password along with associated information to said file\n");
     printf("list - List all entries for which there is a password\n");
     printf("rm - Remove a password along with associated information from the file\n");
-    printf("get - Retrieve a password from the file\n");
+    printf("get - Retrieve a password\n");
   }
   else if (argc == 2) {
     /* This is the case where the binary's name plus another argument has been passed.
@@ -25,91 +25,114 @@ int main(int argc, char *argv[])
     int argrm = strncmp(argv[1], "rm", 5);
     int argget = strncmp(argv[1], "get", 5);
 
+    char* folderpath = "/.local/share/citpass";
+    char* filepath = strcat(folderpath, "/passwords");
+
     if (arginit == 0) {
       /* Initialization
       * Before doing anything, we need to know whether or not the application folder in ~/.local/share
       * and the file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
       * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
       */
-      char* folderpath = "/.local/share/citpass";
+
       folderpath = strcat(homepath, folderpath);
       /* Here, we check if the folder exists, */
       if (access(folderpath, F_OK) != -1) {
         printf("The folder at %s exists.\n", folderpath);
-        char* filepath = strcat(folderpath, "/passwords");
         if (access(filepath, F_OK) != -1) {
           /* And here, we check if the file within exists as well, */
           printf("The file at %s exists as well. No action necessary.\n", filepath);
         }
         else {
+          /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
+          FILE *filecheck;
           printf("The file doesn't exist. Creating it.\n");
+          filecheck = fopen(filepath, "w");
+          fclose(filecheck);
         }
       }
       else {
         printf("The folder at %s doesn't exist. Creating it.\n", folderpath);
+        printf("Creating file within folder as well.\n");
       }
 
     /* File encryption */
 
     }
     else if (argadd == 0) {
-    /* Addition of password */
+      /* Addition of password */
 
-      printf("Placeholder for add.\n");
+      FILE *fileadd;
 
-    /* File unencryption */
+      fileadd = fopen(filepath, "a");
 
-    /* Appending an empty entry to the end of the database file */
+      /* File unencryption */
 
-    /* User now fills the entry with information */
+      /* Appending an empty entry to the end of the database file */
 
-    /* File encryption */
+      /* User now fills the entry with information */
+
+      fclose(fileadd);
+
+      /* File encryption */
 
     }
     else if (arglist == 0) {
-    /* Addition of password */
+      /* Addition of password */
 
-      printf("Placeholder for list.\n");
+      FILE *filelist;
 
-    /* File unencryption */
+      filelist = fopen(filepath, "r");
 
-    /* Appending an empty entry to the end of the database file */
+      /* File unencryption */
 
-    /* User now fills the entry with information */
+      /* Appending an empty entry to the end of the database file */
 
-    /* File encryption */
+      /* User now fills the entry with information */
+
+      fclose(filelist);
+
+      /* File encryption */
 
     }
     else if (argrm == 0) {
-    /* Removal of password */
+      /* Removal of password */
 
-      printf("Placeholder for rm.\n");
+      FILE *filerm;
 
-    /* File unencryption */
+      filerm = fopen(filepath, "w");
 
-    /* Print out list of entries */
+      /* File unencryption */
 
-    /* User selects entry */
+      /* Print out list of entries */
 
-    /* Entry is deleted */
+      /* User selects entry */
 
-    /* File encryption */
+      /* Entry is deleted */
+
+      fclose(filerm);
+
+      /* File encryption */
 
     }
     else if (argget == 0) {
-    /* Retrieval of password */
+      /* Retrieval of password */
 
-      printf("Placeholder for get.\n");
+      FILE *fileget;
 
-    /* File unencryption */
+      fileget = fopen(filepath, "r");
 
-    /* Print out list of entries */
+      /* File unencryption */
 
-    /* User selects entry */
+      /* Print out list of entries */
 
-    /* Password is printed to stdout */
+      /* User selects entry */
 
-    /* File encryption */
+      /* Password is printed to stdout */
+
+      fclose(fileget);
+
+      /* File encryption */
 
     }
     else {
@@ -119,7 +142,7 @@ int main(int argc, char *argv[])
       printf("add - Add a password along with associated information to said file\n");
       printf("list - List all entries for which there is a password\n");
       printf("rm - Remove a password along with associated information from the file\n");
-      printf("get - Retrieve a password from the file\n");
+      printf("get - Retrieve a password\n");
     }
   }
   else if (argc > 2) {
