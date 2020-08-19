@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 int main(int argc, char *argv[])
 {
@@ -28,7 +29,7 @@ int main(int argc, char *argv[])
     int argget = strncmp(argv[1], "get", 5);
 
     char* folderpath = "/.local/share/citpass";
-    char* filepath = strncat(folderpath, "/passwords", 300); /* In the future, this'll be set by the user, through a configuration file or an argument */
+    char* filepath = strncat(folderpath, "/passwords", 400); /* In the future, this'll be set by the user, through a configuration file or an argument */
 
     /* What's below could be put into a function */
 
@@ -40,7 +41,7 @@ int main(int argc, char *argv[])
       * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
       */
 
-      folderpath = strncat(homepath, folderpath, 300);
+      folderpath = strncat(homepath, folderpath, 400);
       /* Here, we check if the folder exists, */
       if (access(folderpath, F_OK) != -1)
       {
@@ -63,7 +64,18 @@ int main(int argc, char *argv[])
       else
       {
         printf("The folder at %s doesn't exist. Creating it.\n", folderpath);
-        printf("Creating file within folder as well.\n");
+
+        if (mkdir(folderpath, 0600) == -1)
+        {
+          printf("Creating folder failed. Aborting.\n");
+        }
+        else {
+          printf("Creating file within folder as well.\n");
+
+          FILE *filecheck;
+          filecheck = fopen(filepath, "w");
+          fclose(filecheck);
+        }
       }
 
     /* What's above could be put into a function */
