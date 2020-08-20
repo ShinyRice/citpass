@@ -11,10 +11,10 @@ int main(int argc, char *argv[])
   * executes when just the binary's name has been invoked, */
   if (argc == 1)
   {
-    printf("citpass requires an argument. Possible arguments are:\n");
+    printf("citpass requires a command. Possible arguments are:\n");
     printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
     printf("add - Add a password along with associated information to said file\n");
-    printf("list - List all entries for which there is a password\n");
+    printf("ls - List all entries for which there is a password\n");
     printf("rm - Remove a password along with associated information from the file\n");
     printf("get - Retrieve a password\n");
   }
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     * Now, it's necessary to parse the command line argument passed to the program, so */
     int arginit = strncmp(argv[1], "init", 5);
     int argadd = strncmp(argv[1], "add", 5);
-    int arglist = strncmp(argv[1], "list", 5);
+    int argls = strncmp(argv[1], "ls", 5);
     int argrm = strncmp(argv[1], "rm", 5);
     int argget = strncmp(argv[1], "get", 5);
 
@@ -69,7 +69,8 @@ int main(int argc, char *argv[])
         {
           printf("Creating folder failed. Aborting.\n");
         }
-        else {
+        else
+        {
           printf("Creating file within folder as well.\n");
 
           FILE *filecheck;
@@ -102,13 +103,13 @@ int main(int argc, char *argv[])
       /* File encryption */
 
     }
-    else if (arglist == 0)
+    else if (argls == 0)
     {
       /* Addition of password */
 
-      FILE *filelist;
+      FILE *filels;
 
-      filelist = fopen(filepath, "r");
+      filels = fopen(filepath, "r");
 
       /* File unencryption */
 
@@ -116,7 +117,7 @@ int main(int argc, char *argv[])
 
       /* User now fills the entry with information */
 
-      fclose(filelist);
+      fclose(filels);
 
       /* File encryption */
 
@@ -127,7 +128,7 @@ int main(int argc, char *argv[])
 
       FILE *filerm;
 
-      filerm = fopen(filepath, "w");
+      filerm = fopen(filepath, "rw");
 
       /* File unencryption */
 
@@ -165,16 +166,17 @@ int main(int argc, char *argv[])
     }
     else
     {
-      printf("Invalid argument. Please provide a valid one.\n");
-      printf("Possible arguments are:\n");
+      printf("Invalid command, please provide a valid one.\n");
+      printf("Possible commands are:\n");
       printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
       printf("add - Add a password along with associated information to said file\n");
-      printf("list - List all entries for which there is a password\n");
+      printf("ls - List all entries for which there is a password\n");
       printf("rm - Remove a password along with associated information from the file\n");
       printf("get - Retrieve a password\n");
     }
   }
-  else if (argc > 2) {
+  else if (argc > 2)
+  {
     /* citpass will require a second argument when retrieving and removing a password, the title of such a password.
     * As such, it'll be here when the time comes. */
       printf("Too many arguments supplied.\n");
