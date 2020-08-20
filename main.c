@@ -28,10 +28,8 @@ int main(int argc, char *argv[])
     int argrm = strncmp(argv[1], "rm", 5);
     int argget = strncmp(argv[1], "get", 5);
 
-    char* folderpath = "/.local/share/citpass";
+    char* folderpath = strncat(homepath, "/.local/share/citpass", 400);
     char* filepath = strncat(folderpath, "/passwords", 400); /* In the future, this'll be set by the user, through a configuration file or an argument */
-
-    /* What's below could be put into a function */
 
     if (arginit == 0)
     {
@@ -41,7 +39,6 @@ int main(int argc, char *argv[])
       * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
       */
 
-      folderpath = strncat(homepath, folderpath, 400);
       /* Here, we check if the folder exists, */
       if (access(folderpath, F_OK) != -1)
       {
@@ -79,8 +76,6 @@ int main(int argc, char *argv[])
         }
       }
 
-    /* What's above could be put into a function */
-
     /* File encryption */
 
     }
@@ -89,16 +84,61 @@ int main(int argc, char *argv[])
       /* Addition of password */
 
       FILE *fileadd;
-
       fileadd = fopen(filepath, "a");
+
+      /* Again, before doing anything, we need to know whether or not the application folder in ~/.local/share
+      * and the file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
+      * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
+      */
+
+      /* Here, we check if the folder exists, */
+      if (access(folderpath, F_OK) != -1)
+      {
+        /* And here, we check if the file within exists as well. In this case, since they both exist, we do the deed. */
+        if (access(filepath, F_OK) != -1)
+        {
+          char* title
+          char* password
+          char* username
+          char* url
+          char* notes
+
+          FILE *fileadd;
+          fileadd = fopen(filepath, "a");
+
+          printf("Title:");
+	  scanf("%s", title);
+
+          printf("\nPassword:");
+          scanf("%s", password);
+
+          printf("\nUsername:");
+	  scanf("%s", username);
+
+          printf("\nURL:");
+	  scanf("%s", url);
+
+          printf("\nNotes:");
+	  scanf("%s", notes);
+
+          fclose(fileadd);
+	}
+        else
+        {
+          /* This is the case where the folder exists, but the file doesn't. The program asks the user to first go through init. */
+          printf("The database file doesn't exist. Please run \"citpass init\" to create it.\n");
+        }
+      }
+      else
+      {
+        printf("The folder at %s doesn't exist. Please run \"citpass init\" to create both it and the database file within.\n", folderpath);
+      }
 
       /* File unencryption */
 
       /* User fills the entry with information */
 
       /* Appending an entry to the end of the database file */
-
-      fclose(fileadd);
 
       /* File encryption */
 
@@ -179,7 +219,7 @@ int main(int argc, char *argv[])
   {
     /* citpass will require a second argument when retrieving and removing a password, the title of such a password.
     * As such, it'll be here when the time comes. */
-      printf("Too many arguments supplied.\n");
+    printf("Too many arguments supplied.\n");
   }
   return 0;
 }

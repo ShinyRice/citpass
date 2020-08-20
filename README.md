@@ -69,7 +69,7 @@ currently developing this with glibc in mind. Other C standard libraries
 might work, but I haven't tested them out. I'll make sure this isn't specific
 to glibc, don't think that'll be hard.
 
-Compile time dependencies are gcc and a C stdlib.
+Compile time dependencies are gcc, make, Linux header files and a C stdlib.
 
 In your shell, change directory to the source folder, and run
 
