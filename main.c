@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+int parsels(char* list);
+
 int main(int argc, char *argv[])
 {
   char* homepath = getenv("HOME");
@@ -24,15 +26,15 @@ int main(int argc, char *argv[])
     * Now, it's necessary to parse the command line argument passed to the program, so */
     int arginit = strncmp(argv[1], "init", 5);
     int argadd = strncmp(argv[1], "add", 5);
-    int argls = strncmp(argv[1], "ls", 5);
+    int argls = parsels(argv[1]);
     int argrm = strncmp(argv[1], "rm", 5);
     int argget = strncmp(argv[1], "get", 5);
 
     char* folderpath = strncat(homepath, "/.local/share/citpass", 400);
+    printf(folderpath);
     char* filepath = strncat(folderpath, "/passwords", 400); /* In the future, this'll be set by the user, through a configuration file or an argument */
 
-    if (arginit == 0)
-    {
+    if (arginit == 0) {
       /* Initialization
       * Before doing anything, we need to know whether or not the application folder in ~/.local/share
       * and the file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
@@ -40,16 +42,13 @@ int main(int argc, char *argv[])
       */
 
       /* Here, we check if the folder exists, */
-      if (access(folderpath, F_OK) != -1)
-      {
+      if (access(folderpath, F_OK) != -1) {
         printf("The folder at %s exists.\n", folderpath);
-        if (access(filepath, F_OK) != -1)
-        {
+        if (access(filepath, F_OK) != -1) {
           /* And here, we check if the file within exists as well, */
           printf("The file at %s exists as well. No action necessary.\n", filepath);
         }
-        else
-        {
+        else {
           /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
           printf("The file doesn't exist. Creating it.\n");
 
@@ -58,16 +57,13 @@ int main(int argc, char *argv[])
           fclose(filecheck);
         }
       }
-      else
-      {
+      else {
         printf("The folder at %s doesn't exist. Creating it.\n", folderpath);
 
-        if (mkdir(folderpath, 0600) == -1)
-        {
+        if (mkdir(folderpath, 0600) == -1) {
           printf("Creating folder failed. Aborting.\n");
         }
-        else
-        {
+        else {
           printf("Creating file within folder as well.\n");
 
           FILE *filecheck;
@@ -79,8 +75,7 @@ int main(int argc, char *argv[])
     /* File encryption */
 
     }
-    else if (argadd == 0)
-    {
+    else if (argadd == 0) {
       /* Addition of password */
 
       /* Again, before doing anything, we need to know whether or not the application folder in ~/.local/share
@@ -89,11 +84,9 @@ int main(int argc, char *argv[])
       */
 
       /* Here, we check if the folder exists, */
-      if (access(folderpath, F_OK) != -1)
-      {
+      if (access(folderpath, F_OK) != -1) {
         /* And here, we check if the file within exists as well. In this case, since they both exist, we do the deed. */
-        if (access(filepath, F_OK) != -1)
-        {
+        if (access(filepath, F_OK) != -1) {
           char title[100];
           char password[100];
           char username[100];
@@ -118,16 +111,20 @@ int main(int argc, char *argv[])
           printf("\nNotes:");
           scanf("%s", notes);
 
+          fprintf(fileadd, strncat("Title: ", title, 250));
+          fprintf(fileadd, strncat("\nPassword: ", password, 250));
+          fprintf(fileadd, strncat("\nUsername: ", username, 250));
+          fprintf(fileadd, strncat("\nURL: ", url, 250));
+          fprintf(fileadd, strncat("\nNotes: ", notes, 250));
+
           fclose(fileadd);
         }
-        else
-        {
+        else {
           /* This is the case where the folder exists, but the file doesn't. The program asks the user to first go through init. */
           printf("The database file doesn't exist. Please run \"citpass init\" to create it.\n");
         }
       }
-      else
-      {
+      else {
         printf("The folder at %s doesn't exist. Please run \"citpass init\" to create both it and the database file within.\n", folderpath);
       }
 
@@ -140,8 +137,7 @@ int main(int argc, char *argv[])
       /* File encryption */
 
     }
-    else if (argls == 0)
-    {
+    else if (argls == 0) {
       /* Addition of password */
 
       FILE *filels;
@@ -158,8 +154,7 @@ int main(int argc, char *argv[])
       /* File encryption */
 
     }
-    else if (argrm == 0)
-    {
+    else if (argrm == 0) {
       /* Removal of password */
 
       FILE *filerm;
@@ -178,8 +173,7 @@ int main(int argc, char *argv[])
       /* File encryption */
 
     }
-    else if (argget == 0)
-    {
+    else if (argget == 0) {
       /* Retrieval of password */
 
       FILE *fileget;
@@ -198,8 +192,7 @@ int main(int argc, char *argv[])
       /* File encryption */
 
     }
-    else
-    {
+    else {
       printf("Invalid command, please provide a valid one.\n");
       printf("Possible commands are:\n");
       printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
@@ -209,11 +202,29 @@ int main(int argc, char *argv[])
       printf("get - Retrieve a password\n");
     }
   }
-  else if (argc > 2)
-  {
+  else if (argc > 2) {
     /* citpass will require a second argument when retrieving and removing a password, the title of such a password.
     * As such, it'll be here when the time comes. */
     printf("Too many arguments supplied.\n");
   }
   return 0;
+}
+
+int parsels(char* list) {
+  int result;
+
+  if (strncmp(list, "ls", 5) == 0) {
+    result = 0;
+  }
+  else if (strncmp(list, "list", 5) == 0) {
+    result = 0;
+  }
+  else if (strncmp(list, "show", 5) == 0) {
+    result = 0;
+  }
+  else {
+    result = 1;
+  }
+
+  return result;
 }
