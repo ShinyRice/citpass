@@ -50,13 +50,18 @@ saner defaults. Saner to me, at least.
 pass needs Bash, and Bash *is* bloat, to me and to other people. As this is written in C, obviously this doesn't
 depend on a particular shell.
 
-- I honestly don't think that a password manager needs to manage any sort of synchronization between computers.
+- I honestly don't think that a password manager needs to manage any sort of synchronization between systems.
 Even if said synchronization is mostly delegated to a separate program, as many things in pass are.
 Well, folders *do* lend themselves to synchronizing with git, but in citpass' case, having a git
 repo for a single file/folder with one file doesn't make a lot of sense.
 
-About that last point, yes, I'm aware there's spm, written in POSIX shell. Its design is, however,
-flawed in the same way I described in the first point.
+About the first point, I know that is covered by [pass-tomb](https://github.com/roddhjav/pass-tomb), but
+that is not exactly default behaviour, it requires another separate program (which looks promising actually),
+and the cherry on top is that it requires systemd. Since I've already said Bash is bloat, I believe you
+can guess correctly what's my opinion on systemd, so let's not get into that.
+
+About the second point, I'm aware there's spm, written in POSIX shell. Its design is, however, flawed in the same
+way I described in the first point.
 
 My reasons to start writing my own password manager are feeble, I'll admit that much. I can just work
 around what I percieve to be wrong with these. But, I wanted to practice writing a program,
@@ -64,12 +69,11 @@ and I didn't want to write something that has been done before to death.
 
 # Building and installation
 
-The only run time dependency there is right now is the C standard library,
-currently developing this with glibc in mind. Other C standard libraries
-might work, but I haven't tested them out. I'll make sure this isn't specific
+The only run time dependency there is right now is the C standard library, currently developing this with glibc
+in mind. Other C standard libraries might work, but I haven't tested them out. I'll make sure this isn't specific
 to glibc, don't think that'll be hard.
 
-Compile time dependencies are gcc, make, Linux header files and a C stdlib.
+Compile time dependencies are gcc, make, Linux header files and a C standard library.
 
 In your shell, change directory to the source folder, and run
 
