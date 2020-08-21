@@ -83,9 +83,6 @@ int main(int argc, char *argv[])
     {
       /* Addition of password */
 
-      FILE *fileadd;
-      fileadd = fopen(filepath, "a");
-
       /* Again, before doing anything, we need to know whether or not the application folder in ~/.local/share
       * and the file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
       * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
@@ -97,32 +94,32 @@ int main(int argc, char *argv[])
         /* And here, we check if the file within exists as well. In this case, since they both exist, we do the deed. */
         if (access(filepath, F_OK) != -1)
         {
-          char* title
-          char* password
-          char* username
-          char* url
-          char* notes
+          char title[100];
+          char password[100];
+          char username[100];
+          char url[100];
+          char notes[100];
 
           FILE *fileadd;
           fileadd = fopen(filepath, "a");
 
           printf("Title:");
-	  scanf("%s", title);
+          scanf("%s", title);
 
           printf("\nPassword:");
           scanf("%s", password);
 
           printf("\nUsername:");
-	  scanf("%s", username);
+          scanf("%s", username);
 
           printf("\nURL:");
-	  scanf("%s", url);
+          scanf("%s", url);
 
           printf("\nNotes:");
-	  scanf("%s", notes);
+          scanf("%s", notes);
 
           fclose(fileadd);
-	}
+        }
         else
         {
           /* This is the case where the folder exists, but the file doesn't. The program asks the user to first go through init. */
@@ -148,7 +145,6 @@ int main(int argc, char *argv[])
       /* Addition of password */
 
       FILE *filels;
-
       filels = fopen(filepath, "r");
 
       /* File unencryption */
@@ -167,7 +163,6 @@ int main(int argc, char *argv[])
       /* Removal of password */
 
       FILE *filerm;
-
       filerm = fopen(filepath, "rw");
 
       /* File unencryption */
@@ -188,7 +183,6 @@ int main(int argc, char *argv[])
       /* Retrieval of password */
 
       FILE *fileget;
-
       fileget = fopen(filepath, "r");
 
       /* File unencryption */
