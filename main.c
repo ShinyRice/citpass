@@ -1,6 +1,6 @@
-#include <stdio.h>
+#include <stdio.h> /* printf, scanf, and to file streams */
 #include <stdlib.h>
-#include <string.h>
+#include <string.h> /* String manipulation */
 #include <unistd.h>
 #include <sys/stat.h>
 
@@ -9,11 +9,16 @@ int parsels(char* list);
 int main(int argc, char *argv[])
 {
   char* homepath = getenv("HOME");
-  /* First, it's necessary to know how many arguments have been passed. This first case below
+  char* folderpath = homepath;
+  strncat(folderpath, "/.local/share/citpass", 400);
+  char* filepath = folderpath;
+  strncat(filepath, "/passwords", 400); /* In the future, this'll be set by the user, through a configuration file or an argument */
+
+  /* First, it's necessary to know how many commands have been passed. This first case below
   * executes when just the binary's name has been invoked, */
   if (argc == 1)
   {
-    printf("citpass requires a command. Possible arguments are:\n");
+    printf("citpass requires a command. Possible commands are:\n");
     printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
     printf("add - Add a password along with associated information to said file\n");
     printf("ls - List all entries for which there is a password\n");
@@ -22,17 +27,13 @@ int main(int argc, char *argv[])
   }
   else if (argc == 2)
   {
-    /* This is the case where the binary's name plus another argument has been passed.
-    * Now, it's necessary to parse the command line argument passed to the program, so */
+    /* This is the case where the binary's name and a command have been passed.
+    * Now, it's necessary to parse the command passed to the program, so */
     int arginit = strncmp(argv[1], "init", 5);
     int argadd = strncmp(argv[1], "add", 5);
     int argls = parsels(argv[1]);
     int argrm = strncmp(argv[1], "rm", 5);
     int argget = strncmp(argv[1], "get", 5);
-
-    char* folderpath = strncat(homepath, "/.local/share/citpass", 400);
-    printf(folderpath);
-    char* filepath = strncat(folderpath, "/passwords", 400); /* In the future, this'll be set by the user, through a configuration file or an argument */
 
     if (arginit == 0) {
       /* Initialization
@@ -90,8 +91,8 @@ int main(int argc, char *argv[])
           char title[100];
           char password[100];
           char username[100];
-          char url[100];
-          char notes[100];
+          char url[200];
+          char notes[1000];
 
           FILE *fileadd;
           fileadd = fopen(filepath, "a");
@@ -203,7 +204,7 @@ int main(int argc, char *argv[])
     }
   }
   else if (argc > 2) {
-    /* citpass will require a second argument when retrieving and removing a password, the title of such a password.
+    /* citpass will require an argument when retrieving and removing a password, the title of such a password.
     * As such, it'll be here when the time comes. */
     printf("Too many arguments supplied.\n");
   }
@@ -213,13 +214,7 @@ int main(int argc, char *argv[])
 int parsels(char* list) {
   int result;
 
-  if (strncmp(list, "ls", 5) == 0) {
-    result = 0;
-  }
-  else if (strncmp(list, "list", 5) == 0) {
-    result = 0;
-  }
-  else if (strncmp(list, "show", 5) == 0) {
+  if (strncmp(list, "ls", 5) == 0 || strncmp(list, "list", 5) == 0 || strncmp(list, "show", 5) == 0) {
     result = 0;
   }
   else {
