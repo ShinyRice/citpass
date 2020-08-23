@@ -50,7 +50,7 @@ saner defaults. Saner to me, at least.
 pass needs Bash, and Bash *is* bloat, to me and to other people. As this is written in C, obviously this doesn't
 depend on a particular shell.
 
-- I honestly don't think that a password manager needs to manage any sort of synchronization between systems.
+- I honestly don't think that a password manager needs to deal with any sort of synchronization between systems.
 Even if said synchronization is mostly delegated to a separate program, as many things in pass are.
 Well, folders *do* lend themselves to synchronizing with git, but in citpass' case, having a git
 repo for a single file/folder with one file doesn't make a lot of sense.
@@ -73,7 +73,7 @@ The only run time dependency there is right now is the C standard library, curre
 in mind. Other C standard libraries might work, but I haven't tested them out. I'll make sure this isn't specific
 to glibc, don't think that'll be hard.
 
-Compile time dependencies are gcc, make, Linux header files and a C standard library.
+Compile time dependencies are GCC, Make, Linux header files and a C standard library.
 
 In your shell, change directory to the source folder, and run
 
