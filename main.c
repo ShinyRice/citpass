@@ -1,12 +1,10 @@
-#include <stdio.h> /* printf, scanf, and to file streams */
+#include <stdio.h> /* printf, scanf, fputs, fgets... */
 #include <stdlib.h> /* File I/O */
 #include <string.h> /* String manipulation */
 #include <sys/stat.h> /* Creating folders */
 #include <unistd.h>
 
-/* Function declarations */
-int parsels(char* list);
-
+/* Functions */
 int parsels(char* list) {
   int result;
 
@@ -18,6 +16,30 @@ int parsels(char* list) {
   }
 
   return result;
+}
+
+void show_command_information(int situation) {
+  switch (situation) {
+    case 0:
+      printf("citpass requires a command. Possible commands are:\n");
+      printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
+      printf("add - Add a password along with associated information to said file\n");
+      printf("ls - List all entries for which there is a password\n");
+      printf("rm - Remove a password along with associated information from the file\n");
+      printf("get - Retrieve a password\n");
+      break;
+    case 1:
+      printf("Invalid command, please provide a valid one.\n");
+      printf("Possible commands are:\n");
+      printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
+      printf("add - Add a password along with associated information to said file\n");
+      printf("ls - List all entries for which there is a password\n");
+      printf("rm - Remove a password along with associated information from the file\n");
+      printf("get - Retrieve a password\n");
+      break;
+    case 2:
+      printf("This command does not need arguments.");
+  }
 }
 
 int main(int argc, char *argv[])
@@ -36,12 +58,7 @@ int main(int argc, char *argv[])
   * executes when just the binary's name has been invoked, */
   if (argc == 1)
   {
-    printf("citpass requires a command. Possible commands are:\n");
-    printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
-    printf("add - Add a password along with associated information to said file\n");
-    printf("ls - List all entries for which there is a password\n");
-    printf("rm - Remove a password along with associated information from the file\n");
-    printf("get - Retrieve a password\n");
+    show_command_information(0);
   }
   else if (argc == 2)
   {
@@ -117,28 +134,23 @@ int main(int argc, char *argv[])
 
           printf("Title: ");
           fgets(title, 100, stdin);
-          fputs("Title: ", fileadd);
-          fputs(title, fileadd);
+          fprintf(fileadd, "Title: %s", title);
 
           printf("Password: ");
           fgets(password, 100, stdin);
-          fputs("Password: ", fileadd);
-          fputs(password, fileadd);
+          fprintf(fileadd, "Password: %s", password);
 
           printf("Username: ");
           fgets(username, 100, stdin);
-          fputs("Username: ", fileadd);
-          fputs(username, fileadd);
+          fprintf(fileadd, "Username: %s", username);
 
           printf("URL: ");
           fgets(url, 200, stdin);
-          fputs("URL: ", fileadd);
-          fputs(url, fileadd);
+          fprintf(fileadd, "URL: %s", url);
 
           printf("Notes: ");
           fgets(notes, 1000, stdin);
-          fputs("Notes: ", fileadd);
-          fputs(notes, fileadd);
+          fprintf(fileadd, "Notes: %s", notes);
 
           fclose(fileadd);
         }
@@ -216,13 +228,7 @@ int main(int argc, char *argv[])
 
     }
     else {
-      printf("Invalid command, please provide a valid one.\n");
-      printf("Possible commands are:\n");
-      printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
-      printf("add - Add a password along with associated information to said file\n");
-      printf("ls - List all entries for which there is a password\n");
-      printf("rm - Remove a password along with associated information from the file\n");
-      printf("get - Retrieve a password\n");
+      show_command_information(1);
     }
   }
   else if (argc > 2) {
@@ -237,26 +243,20 @@ int main(int argc, char *argv[])
     int argget = strncmp(argv[1], "get", 5);
 
     if (arginit == 0) {
-      printf("This command does not need arguments.");
+      show_command_information(2);
     }
     else if (argadd == 0) {
-      printf("This command does not need arguments.");
+      show_command_information(2);
     }
     else if (argls == 0){
-      printf("Command ls does not need arguments.");
+      show_command_information(2);
     }
     else if (argrm == 0) {
     }
     else if (argget == 0) {
     }
     else {
-      printf("Invalid command, please provide a valid one.\n");
-      printf("Possible commands are:\n");
-      printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
-      printf("add - Add a password along with associated information to said file\n");
-      printf("ls - List all entries for which there is a password\n");
-      printf("rm - Remove a password along with associated information from the file\n");
-      printf("get - Retrieve a password\n");
+      show_command_information(1);
     }
   }
   return 0;
