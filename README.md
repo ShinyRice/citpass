@@ -12,7 +12,9 @@ It is similar to pass in the sense that;
 
 However, citpass differs from it, by
 
-- Storing all passwords and relevant data associated to each in a single file
+- Storing passwords somewhat differently. It does store each password in a separate file, along with
+metadata, but filenames are random, and an encrypted index file is used to point the user to the correct
+password
 
 - Being written in C99
 
@@ -20,7 +22,7 @@ However, citpass differs from it, by
 
 For now, I've only thought of making it do five things,
 
-- Creating the file where passwords will be stored, which is hardcoded for now to $HOME/.local/share/citpass/passwords
+- Creating the folder where passwords are stored and corresponding index file, which is hardcoded for now to $HOME/.local/share/citpass
 
 - Adding passwords to this file. Each password will have metadata associated to it stored in the file too,
 with a format taken after KeePass, storing title, username, password, URL and notes about the service
@@ -29,7 +31,7 @@ with a format taken after KeePass, storing title, username, password, URL and no
 
 - Removing passwords and associated metadata
 
-- Retrieving a password from the file. At first, there will only be the option of printing it to stdout,
+- Retrieving a password. At first, there will only be the option of printing it to stdout,
 but when this program is far along enough, I plan on piping it directly to clipboard, by making use of
 xclip in X11 and wl-clipboard in Wayland
 
