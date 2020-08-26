@@ -8,6 +8,7 @@
 /* Functions */
 /* Setting the path where passwords are store, done through an environment variable */
 void setting_folderpath(char* homepath, char folderpath[500]) {
+
   char* storelocation = getenv("CITPASS_STORE");
 
   if (strncmp(storelocation, "", 400) == 0) {
@@ -21,14 +22,12 @@ void setting_folderpath(char* homepath, char folderpath[500]) {
 
 int parse_ls(char* list) {
   int result;
-
   if (strncmp(list, "ls", 5) == 0 || strncmp(list, "list", 5) == 0 || strncmp(list, "show", 5) == 0) {
     result = 0;
   }
   else {
     result = 1;
   }
-
   return result;
 }
 
@@ -37,7 +36,7 @@ void show_command_information(int situation) {
   switch (situation) {
     case 0:
       printf("citpass requires a command. Possible commands are:\n");
-      printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
+      printf("init - Create the folder where passwords will be stored, located at $HOME/.local/share/citpass\n");
       printf("add - Add a password along with associated information to said file\n");
       printf("ls - List all entries for which there is a password\n");
       printf("rm - Remove a password along with associated information from the file\n");
@@ -46,7 +45,7 @@ void show_command_information(int situation) {
     case 1:
       printf("Invalid command, please provide a valid one.\n");
       printf("Possible commands are:\n");
-      printf("init - Create the file where passwords will be stored, located at $HOME/.local/share/citpass/passwords\n");
+      printf("init - Create the folder where passwords will be stored, located at $HOME/.local/share/citpass\n");
       printf("add - Add a password along with associated information to said file\n");
       printf("ls - List all entries for which there is a password\n");
       printf("rm - Remove a password along with associated information from the file\n");
@@ -84,9 +83,9 @@ void init(char* folderpath, char* indexpath) {
       /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
       printf("The index file doesn't exist. Creating it.\n");
 
-      FILE *filecheck;
-      filecheck = fopen(indexpath, "w");
-      fclose(filecheck);
+      FILE *indexcheck;
+      indexcheck = fopen(indexpath, "w");
+      fclose(indexcheck);
     }
   }
   else {
@@ -122,7 +121,7 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
       /* Append it to the folder path, */
       strncat(filepath, randstr, 500);
 
-      /* Open the file and put the stuff in it */
+      /* File is opened, and subsequently the user fills the file with the password and relevant metadata */
 
       FILE *fileadd;
       fileadd = fopen(filepath, "a");
@@ -139,11 +138,13 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
       newt.c_lflag &= ~ECHO;
       tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
+      /* Here's the actual input */
       fgets(password, 100, stdin);
-      fprintf(fileadd, "Password: %s", password);
 
       /* Here the terminal is brought back to how it was */
       tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
+      fprintf(fileadd, "Password: %s", password);
 
       printf("Username: ");
       fgets(username, 100, stdin);
@@ -159,6 +160,7 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
 
       fclose(fileadd);
 
+      /* Appending the title of the entry and corresponding filename to the end of the index file */
       FILE *indexadd;
       indexadd = fopen(indexpath, "a");
 
@@ -168,16 +170,15 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
       fclose(indexadd);
    }
    else {
-     /* This is the case where the folder exists, but the file doesn't. The program asks the user to first go through init. */
-     printf("The database file doesn't exist. Please run \"citpass init\" to create it.\n");
+     printf("The index file doesn't exist. Please run \"citpass init\" to create it.\n");
    }
  }
  else {
-   printf("The folder at %s doesn't exist. Please run \"citpass init\" to create both it and the database file within.\n", folderpath);
+   printf("The folder at %s doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", folderpath);
  }
 }
 
-void ls_password(char* indexpath) {
+void list_passwords(char* indexpath) {
       FILE *indexfile;
       indexfile = fopen(indexpath, "r");
 
@@ -239,6 +240,7 @@ int main(int argc, char *argv[])
   char filepath[500];
   /* The full path of the file to be decrypted and opened isn't completely specified, that will be done according to user input */
   strncpy(filepath, folderpath, 400);
+  strncat(filepath, "/", 400);
 
   /* Now, it's necessary to parse the command passed to the program, so */
   int arginit = strncmp(argv[1], "init", 5);
@@ -261,11 +263,7 @@ int main(int argc, char *argv[])
       * and the index file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
       * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
       */
-
       init(folderpath, indexpath);
-
-    /* File encryption */
-
     }
     else if (argadd == 0) {
       /* Addition of password */
@@ -277,18 +275,10 @@ int main(int argc, char *argv[])
 
       add_password(folderpath, indexpath, filepath);
 
-      /* File decryption */
-
-      /* User fills the entry with information */
-
-      /* Appending an entry to the end of the database file */
-
-      /* File encryption */
-
     }
     else if (argls == 0) {
       /* Addition of password */
-      ls_password(indexpath);
+      list_passwords(indexpath);
     }
     else if (argrm == 0) {
       rm_password(indexpath);
@@ -302,7 +292,8 @@ int main(int argc, char *argv[])
     }
   }
   else if (argc == 2) {
-    /* citpass will require an argument when retrieving and removing a password, the title of such a password. */
+    /* citpass will require an argument when retrieving and removing a password, the title of such a password.
+     * Other commands do not, so we catch those cases and promptly inform the user. */
     printf("Too many arguments supplied.\n");
 
     if (arginit == 0) {
@@ -323,7 +314,6 @@ int main(int argc, char *argv[])
     }
   }
   else if (argc > 2) {
-
     if (arginit == 0) {
       show_command_information(2);
     }
