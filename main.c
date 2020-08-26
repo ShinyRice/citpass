@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 /* Functions */
+/* Setting the path where passwords are store, done through an environment variable */
 void setting_folderpath(char* homepath, char folderpath[500]) {
   char* storelocation = getenv("CITPASS_STORE");
 
@@ -31,6 +32,7 @@ int parse_ls(char* list) {
   return result;
 }
 
+/* Self-explanatory */
 void show_command_information(int situation) {
   switch (situation) {
     case 0:
@@ -55,64 +57,173 @@ void show_command_information(int situation) {
   }
 }
 
-void add_password(char* filepath, char* indexpath) {
-  char randomstring[100];
+/* Generating a random string */
+static char *rand_string(char *str, size_t size) {
+  const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  if (size) {
+    --size;
+    for (size_t n = 0; n < size; n++) {
+      int key = rand() % (int) (sizeof charset - 1);
+      str[n] = charset[key];
+    }
+    str[size] = '\0';
+  }
+  return str;
+}
+
+/* Initializing store */
+void init(char* folderpath, char* indexpath) {
+/* Here, we check if the folder exists, */
+  if (access(folderpath, F_OK) != -1) {
+    printf("The folder at %s exists.\n", folderpath);
+    if (access(indexpath, F_OK) != -1) {
+      /* And here, we check if the index file within exists as well, */
+      printf("The index file at %s exists as well. No action necessary.\n", indexpath);
+    }
+    else {
+      /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
+      printf("The index file doesn't exist. Creating it.\n");
+
+      FILE *filecheck;
+      filecheck = fopen(indexpath, "w");
+      fclose(filecheck);
+    }
+  }
+  else {
+    printf("The folder at %s doesn't exist. Creating it.\n", folderpath);
+    if (mkdir(folderpath, 0700) == -1) {
+      printf("Creating folder failed. Aborting.\n");
+    }
+    else {
+      printf("Creating index file within folder as well.\n");
+
+      FILE *indexcheck;
+      indexcheck = fopen(indexpath, "w");
+      fclose(indexcheck);
+    }
+  }
+}
+
+/* Adding a password to the folder, and adding the random filename to the index */
+void add_password(char* folderpath, char* indexpath, char* filepath) {
+  char randstr[100];
   char title[100];
   char password[100];
   char username[100];
   char url[200];
   char notes[1000];
 
-  strncat(filepath, randomstring, 500);
+  /* Here, we check if the folder exists, */
+  if (access(folderpath, F_OK) != -1) {
+   /* And here, we check if the index file within exists too. In this case, since they both exist, we do the deed. */
+    if (access(indexpath, F_OK) != -1) {
+      /* We generate a random string, */
+      rand_string(randstr, 100);
+      /* Append it to the folder path, */
+      strncat(filepath, randstr, 500);
 
-  /* Get random string from /dev/urandom or something */
+      /* Open the file and put the stuff in it */
 
-  FILE *fileadd;
-  fileadd = fopen(filepath, "a");
+      FILE *fileadd;
+      fileadd = fopen(filepath, "a");
+      printf("Title: ");
+      fgets(title, 100, stdin);
+      fprintf(fileadd, "Title: %s", title);
 
-  printf("Title: ");
-  fgets(title, 100, stdin);
-  fprintf(fileadd, "Title: %s", title);
+      printf("Password: ");
 
-  /* Associate random string from before to this title */
-  /* Write said random string and title to index file */
+      /* These 5 lines here are required for hiding password input from being outputted */
+      struct termios oldt;
+      tcgetattr(STDIN_FILENO, &oldt);
+      struct termios newt = oldt;
+      newt.c_lflag &= ~ECHO;
+      tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-  printf("Password: ");
+      fgets(password, 100, stdin);
+      fprintf(fileadd, "Password: %s", password);
 
-  /* These 5 lines here are required for hiding password input from being outputted */
-  struct termios oldt;
-  tcgetattr(STDIN_FILENO, &oldt);
-  struct termios newt = oldt;
-  newt.c_lflag &= ~ECHO;
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+      /* Here the terminal is brought back to how it was */
+      tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
-  fgets(password, 100, stdin);
-  fprintf(fileadd, "Password: %s", password);
+      printf("Username: ");
+      fgets(username, 100, stdin);
+      fprintf(fileadd, "Username: %s", username);
 
-  /* Here the terminal is brought back to how it was */
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+      printf("URL: ");
+      fgets(url, 200, stdin);
+      fprintf(fileadd, "URL: %s", url);
 
-  printf("Username: ");
-  fgets(username, 100, stdin);
-  fprintf(fileadd, "Username: %s", username);
+      printf("Notes: ");
+      fgets(notes, 1000, stdin);
+      fprintf(fileadd, "Notes: %s", notes);
 
-  printf("URL: ");
-  fgets(url, 200, stdin);
-  fprintf(fileadd, "URL: %s", url);
+      fclose(fileadd);
 
-  printf("Notes: ");
-  fgets(notes, 1000, stdin);
-  fprintf(fileadd, "Notes: %s", notes);
+      FILE *indexadd;
+      indexadd = fopen(indexpath, "a");
 
-  fclose(fileadd);
+      fprintf(indexadd, "%s,", title);
+      fprintf(indexadd, "%s", randstr);
 
-  FILE *indexadd;
-  indexadd = fopen(indexpath, "a");
+      fclose(indexadd);
+   }
+   else {
+     /* This is the case where the folder exists, but the file doesn't. The program asks the user to first go through init. */
+     printf("The database file doesn't exist. Please run \"citpass init\" to create it.\n");
+   }
+ }
+ else {
+   printf("The folder at %s doesn't exist. Please run \"citpass init\" to create both it and the database file within.\n", folderpath);
+ }
+}
 
-  fprintf(indexadd, "%s,", title);
-  fprintf(indexadd, "%s", randomstring);
+void ls_password(char* indexpath) {
+      FILE *indexfile;
+      indexfile = fopen(indexpath, "r");
 
-  fclose(indexadd);
+      /* File decryption */
+
+      /* Appending an empty entry to the end of the database file */
+
+      /* User now fills the entry with information */
+
+      fclose(indexfile);
+
+      /* File encryption */
+}
+
+void rm_password(char* indexpath) {
+      FILE *filerm;
+      filerm = fopen(indexpath, "rw");
+
+      /* File decryption */
+
+      /* Print out list of entries */
+
+      /* User selects entry */
+
+      /* Entry is deleted */
+
+      fclose(filerm);
+
+      /* File encryption */
+}
+
+void get_password(char* indexpath) {
+      FILE *indexfile;
+      indexfile = fopen(indexpath, "r");
+
+      /* File decryption */
+
+      /* Print out list of entries */
+
+      /* User selects entry */
+
+      /* Password is printed to stdout */
+
+      fclose(indexfile);
+
+      /* File encryption */
 }
 
 int main(int argc, char *argv[])
@@ -126,8 +237,15 @@ int main(int argc, char *argv[])
   strncat(indexpath, "/index", 400); /* In the future, this'll be set by the user, through a configuration file or an argument */
 
   char filepath[500];
-  strncpy(filepath, folderpath, 400);
   /* The full path of the file to be decrypted and opened isn't completely specified, that will be done according to user input */
+  strncpy(filepath, folderpath, 400);
+
+  /* Now, it's necessary to parse the command passed to the program, so */
+  int arginit = strncmp(argv[1], "init", 5);
+  int argadd = strncmp(argv[1], "add", 5);
+  int argls = parse_ls(argv[1]);
+  int argrm = strncmp(argv[1], "rm", 5);
+  int argget = strncmp(argv[1], "get", 5);
 
   /* First, it's necessary to know how many commands have been passed. This first case below
   * executes when just the binary's name has been invoked, */
@@ -137,51 +255,14 @@ int main(int argc, char *argv[])
   }
   else if (argc == 2)
   {
-    /* This is the case where the binary's name and a command have been passed.
-    * Now, it's necessary to parse the command passed to the program, so */
-    int arginit = strncmp(argv[1], "init", 5);
-    int argadd = strncmp(argv[1], "add", 5);
-    int argls = parse_ls(argv[1]);
-    int argrm = strncmp(argv[1], "rm", 5);
-    int argget = strncmp(argv[1], "get", 5);
-
     if (arginit == 0) {
       /* Initialization
-      * Before doing anything, we need to know whether or not the password store in ~/.local/share
+      * Before doing anything, we need to know whether or not the password store in ~/.local/share/citpass
       * and the index file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
       * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
       */
 
-      /* Here, we check if the folder exists, */
-      if (access(folderpath, F_OK) != -1) {
-        printf("The folder at %s exists.\n", folderpath);
-        if (access(indexpath, F_OK) != -1) {
-          /* And here, we check if the index file within exists as well, */
-          printf("The index file at %s exists as well. No action necessary.\n", indexpath);
-        }
-        else {
-          /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
-          printf("The index file doesn't exist. Creating it.\n");
-
-          FILE *filecheck;
-          filecheck = fopen(indexpath, "w");
-          fclose(filecheck);
-        }
-      }
-      else {
-        printf("The folder at %s doesn't exist. Creating it.\n", folderpath);
-
-        if (mkdir(folderpath, 0700) == -1) {
-          printf("Creating folder failed. Aborting.\n");
-        }
-        else {
-          printf("Creating file within folder as well.\n");
-
-          FILE *indexcheck;
-          indexcheck = fopen(indexpath, "w");
-          fclose(indexcheck);
-        }
-      }
+      init(folderpath, indexpath);
 
     /* File encryption */
 
@@ -194,22 +275,9 @@ int main(int argc, char *argv[])
       * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
       */
 
-      /* Here, we check if the folder exists, */
-      if (access(folderpath, F_OK) != -1) {
-        /* And here, we check if the index file within exists too. In this case, since they both exist, we do the deed. */
-        if (access(indexpath, F_OK) != -1) {
-          add_password(filepath, indexpath);
-        }
-        else {
-          /* This is the case where the folder exists, but the file doesn't. The program asks the user to first go through init. */
-          printf("The database file doesn't exist. Please run \"citpass init\" to create it.\n");
-        }
-      }
-      else {
-        printf("The folder at %s doesn't exist. Please run \"citpass init\" to create both it and the database file within.\n", folderpath);
-      }
+      add_password(folderpath, indexpath, filepath);
 
-      /* File unencryption */
+      /* File decryption */
 
       /* User fills the entry with information */
 
@@ -220,58 +288,14 @@ int main(int argc, char *argv[])
     }
     else if (argls == 0) {
       /* Addition of password */
-
-      FILE *filels;
-      filels = fopen(indexpath, "r");
-
-      /* File unencryption */
-
-      /* Appending an empty entry to the end of the database file */
-
-      /* User now fills the entry with information */
-
-      fclose(filels);
-
-      /* File encryption */
-
+      ls_password(indexpath);
     }
     else if (argrm == 0) {
-      /* Removal of password */
-
-      FILE *filerm;
-      filerm = fopen(indexpath, "rw");
-
-      /* File unencryption */
-
-      /* Print out list of entries */
-
-      /* User selects entry */
-
-      /* Entry is deleted */
-
-      fclose(filerm);
-
-      /* File encryption */
+      rm_password(indexpath);
 
     }
     else if (argget == 0) {
-      /* Retrieval of password */
-
-      FILE *fileget;
-      fileget = fopen(indexpath, "r");
-
-      /* File unencryption */
-
-      /* Print out list of entries */
-
-      /* User selects entry */
-
-      /* Password is printed to stdout */
-
-      fclose(fileget);
-
-      /* File encryption */
-
+      get_password(indexpath);
     }
     else {
       show_command_information(1);
@@ -280,13 +304,6 @@ int main(int argc, char *argv[])
   else if (argc == 2) {
     /* citpass will require an argument when retrieving and removing a password, the title of such a password. */
     printf("Too many arguments supplied.\n");
-
-    /* Now, it's necessary to parse the command passed to the program, so */
-    int arginit = strncmp(argv[1], "init", 5);
-    int argadd = strncmp(argv[1], "add", 5);
-    int argls = parse_ls(argv[1]);
-    int argrm = strncmp(argv[1], "rm", 5);
-    int argget = strncmp(argv[1], "get", 5);
 
     if (arginit == 0) {
       show_command_information(2);
@@ -306,11 +323,6 @@ int main(int argc, char *argv[])
     }
   }
   else if (argc > 2) {
-    int arginit = strncmp(argv[1], "init", 5);
-    int argadd = strncmp(argv[1], "add", 5);
-    int argls = parse_ls(argv[1]);
-    int argrm = strncmp(argv[1], "rm", 5);
-    int argget = strncmp(argv[1], "get", 5);
 
     if (arginit == 0) {
       show_command_information(2);
