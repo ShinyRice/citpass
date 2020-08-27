@@ -4,11 +4,11 @@
 #include <sys/stat.h> /* Creating folders */
 #include <termios.h>
 #include <unistd.h>
+#include <sodium.h> /* Encryption */
 
 /* Functions */
 /* Setting the path where passwords are store, done through an environment variable */
 void setting_folderpath(char* homepath, char folderpath[500]) {
-
   char* storelocation = getenv("CITPASS_STORE");
 
   if (strncmp(storelocation, "", 400) == 0) {
@@ -20,6 +20,7 @@ void setting_folderpath(char* homepath, char folderpath[500]) {
   }
 }
 
+/* Parsing possible commands for listing passwords */
 int parse_ls(char* list) {
   int result;
   if (strncmp(list, "ls", 5) == 0 || strncmp(list, "list", 5) == 0 || strncmp(list, "show", 5) == 0) {
@@ -57,7 +58,7 @@ void show_command_information(int situation) {
 }
 
 /* Generating a random string */
-static char *rand_string(char *str, size_t size) {
+static char* rand_string(char* str, size_t size) {
   const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   if (size) {
     --size;
@@ -111,6 +112,8 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
   char username[100];
   char url[200];
   char notes[1000];
+  /* Before doing anything, we need to know whether or not the application folder in ~/.local/share
+  * and the file within exist. */
 
   /* Here, we check if the folder exists, */
   if (access(folderpath, F_OK) != -1) {
@@ -160,7 +163,7 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
 
       fclose(fileadd);
 
-      /* Appending the title of the entry and corresponding filename to the end of the index file */
+      /* File's closed, and thus now we append the title of the entry and corresponding randomized filename to the end of the index file */
       FILE *indexadd;
       indexadd = fopen(indexpath, "a");
 
@@ -268,13 +271,7 @@ int main(int argc, char *argv[])
     else if (argadd == 0) {
       /* Addition of password */
 
-      /* Again, before doing anything, we need to know whether or not the application folder in ~/.local/share
-      * and the file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
-      * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
-      */
-
       add_password(folderpath, indexpath, filepath);
-
     }
     else if (argls == 0) {
       /* Addition of password */

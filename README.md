@@ -4,12 +4,7 @@
 
 This is a simple password manager for Linux, inspired in part by [pass](https://www.passwordstore.org/).
 
-It is similar to pass in the sense that;
-
-- It delegates all encryption to GPG (subject to change)
-
-- Aims to be lean
-
+It is similar to pass in the sense that it aims to be simple, lightweight, as well as having readable code, allowing for ease of maintenance.
 However, citpass differs from it, by
 
 - Storing passwords somewhat differently. It does store each password in a separate file, along with
@@ -17,6 +12,8 @@ metadata, but filenames are random, and an encrypted index file is used to point
 password
 
 - Being written in C99
+
+- Delegating all encryption to libsodium
 
 # What does it do?
 
@@ -94,3 +91,7 @@ Optionally, remove the executable file generated,
 ```
 $ make clean
 ```
+
+# License
+
+All of the code I've written myself is licensed under GPL v3 as shown above. This program uses libsodium, which is licensed under the [ISC license](https://en.wikipedia.org/wiki/ISC_license).
