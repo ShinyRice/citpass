@@ -35,27 +35,27 @@ int parse_ls(char* list) {
 void show_command_information(int situation) {
   switch (situation) {
     case 0:
-      printf("citpass requires a command. Possible commands are:\n");
-      printf("init - Create the folder where passwords will be stored, located at $HOME/.local/share/citpass\n");
-      printf("add - Add a password along with associated information to said file\n");
-      printf("ls - List all entries for which there is a password\n");
-      printf("rm - Remove a password along with associated information from the file\n");
-      printf("get - Retrieve a password\n");
+      puts("citpass requires a command. Possible commands are:");
+      puts("init - Create the folder where passwords will be stored, located at $HOME/.local/share/citpass");
+      puts("add - Add a password along with associated information to said file");
+      puts("ls - List all entries for which there is a password");
+      puts("rm - Remove a password along with associated information from the file");
+      puts("get - Retrieve a password");
       break;
     case 1:
-      printf("Invalid command, please provide a valid one.\n");
-      printf("Possible commands are:\n");
-      printf("init - Create the folder where passwords will be stored, located at $HOME/.local/share/citpass\n");
-      printf("add - Add a password along with associated information to said file\n");
-      printf("ls - List all entries for which there is a password\n");
-      printf("rm - Remove a password along with associated information from the file\n");
-      printf("get - Retrieve a password\n");
+      puts("Invalid command, please provide a valid one.");
+      puts("Possible commands are:");
+      puts("init - Create the folder where passwords will be stored, located at $HOME/.local/share/citpass");
+      puts("add - Add a password along with associated information to said file");
+      puts("ls - List all entries for which there is a password");
+      puts("rm - Remove a password along with associated information from the file");
+      puts("get - Retrieve a password");
       break;
     case 2:
-      printf("This command does not need arguments.");
+      puts("This command does not need arguments.");
       break;
     case 3:
-      printf("This command requires the title of an entry in order to proceed.");
+      puts("This command requires the title of an entry in order to proceed.");
   }
 }
 
@@ -84,7 +84,7 @@ void init(char* folderpath, char* indexpath) {
     }
     else {
       /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
-      printf("The index file doesn't exist. Creating it.\n");
+      puts("The index file doesn't exist. Creating it.");
 
       FILE *indexcheck;
       indexcheck = fopen(indexpath, "w");
@@ -94,10 +94,10 @@ void init(char* folderpath, char* indexpath) {
   else {
     printf("The folder at %s doesn't exist. Creating it.\n", folderpath);
     if (mkdir(folderpath, 0700) == -1) {
-      printf("Creating folder failed. Aborting.\n");
+      puts("Creating folder failed. Aborting.");
     }
     else {
-      printf("Creating index file within folder as well.\n");
+      puts("Creating index file within folder as well.");
 
       FILE *indexcheck;
       indexcheck = fopen(indexpath, "w");
@@ -114,10 +114,8 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
   char username[100];
   char url[200];
   char notes[1000];
-  /* Before doing anything, we need to know whether or not the application folder in ~/.local/share
-  * and the file within exist. */
 
-  /* Here, we check if the folder exists, */
+  /* Here, we check if the folder where passwords are stored exists, */
   if (access(folderpath, F_OK) != -1) {
    /* And here, we check if the index file within exists too. In this case, since they both exist, we do the deed. */
     if (access(indexpath, F_OK) != -1) {
@@ -130,11 +128,13 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
 
       FILE *fileadd;
       fileadd = fopen(filepath, "a");
-      printf("Title: ");
+      puts("Title: ");
       fgets(title, 100, stdin);
-      fprintf(fileadd, "Title: %s", title);
+      fputs("Title: ", fileadd);
+      fputs(title, fileadd);
+      fputs("\n", fileadd);
 
-      printf("Password: ");
+      puts("Password: ");
 
       /* These 5 lines here are required for hiding password input from being outputted */
       struct termios oldt;
@@ -149,19 +149,27 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
       /* Here the terminal is brought back to how it was */
       tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
-      fprintf(fileadd, "Password: %s", password);
+      fputs("Password: ", fileadd);
+      fputs(password, fileadd);
+      fputs("\n", fileadd);
 
-      printf("Username: ");
+      puts("Username: ");
       fgets(username, 100, stdin);
-      fprintf(fileadd, "Username: %s", username);
+      fputs("Username: ", fileadd);
+      fputs(username, fileadd);
+      fputs("\n", fileadd);
 
-      printf("URL: ");
+      puts("URL: ");
       fgets(url, 200, stdin);
-      fprintf(fileadd, "URL: %s", url);
+      fputs("URL: ", fileadd);
+      fputs(url, fileadd);
+      fputs("\n", fileadd);
 
-      printf("Notes: ");
+      puts("Notes: ");
       fgets(notes, 1000, stdin);
-      fprintf(fileadd, "Notes: %s", notes);
+      fputs("Notes: ", fileadd);
+      fputs(notes, fileadd);
+      fputs("\n", fileadd);
 
       fclose(fileadd);
 
@@ -175,7 +183,7 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
       fclose(indexadd);
    }
    else {
-     printf("The index file doesn't exist. Please run \"citpass init\" to create it.\n");
+     puts("The index file doesn't exist. Please run \"citpass init\" to create it.");
    }
  }
  else {
@@ -187,7 +195,7 @@ void list_passwords(char* indexpath) {
       FILE *indexfile;
       indexfile = fopen(indexpath, "r");
 
-      /* File decryption */
+      /* Index file decryption */
 
       /* Appending an empty entry to the end of the database file */
 
@@ -195,14 +203,14 @@ void list_passwords(char* indexpath) {
 
       fclose(indexfile);
 
-      /* File encryption */
+      /* Index file encryption */
 }
 
 void rm_password(char* indexpath) {
       FILE *filerm;
       filerm = fopen(indexpath, "rw");
 
-      /* File decryption */
+      /* Index file decryption */
 
       /* Print out list of entries */
 
@@ -212,24 +220,28 @@ void rm_password(char* indexpath) {
 
       fclose(filerm);
 
-      /* File encryption */
+      /* Index file encryption */
 }
 
 void get_password(char* indexpath) {
       FILE *indexfile;
       indexfile = fopen(indexpath, "r");
 
-      /* File decryption */
+      /* Index file decryption */
 
       /* Print out list of entries */
 
       /* User selects entry */
 
+      /* Password file decryption */
+
       /* Password is printed to stdout */
+
+      /* Password file encryption */
 
       fclose(indexfile);
 
-      /* File encryption */
+      /* Index file encryption */
 }
 
 int main(int argc, char *argv[]) {
@@ -261,11 +273,6 @@ int main(int argc, char *argv[]) {
   /* Here's the case when a command's been passed to the program, */
   else if (argc == 2) {
     if (arginit == 0) {
-      /* Initialization
-      * Before doing anything, we need to know whether or not the password store in ~/.local/share/citpass
-      * and the index file within exists. If both exist, then nothing is done. If the folder exists, but the file doesn't,
-      * only the file is created. If the folder doesn't exist, then both the folder and the file within are created.
-      */
       init(folderpath, indexpath);
     }
     else if (argadd == 0) {
