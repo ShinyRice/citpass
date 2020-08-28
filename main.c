@@ -32,7 +32,6 @@ int parse_ls(char* list) {
   return result;
 }
 
-/* Self-explanatory */
 void show_command_information(int situation) {
   switch (situation) {
     case 0:
@@ -54,6 +53,9 @@ void show_command_information(int situation) {
       break;
     case 2:
       printf("This command does not need arguments.");
+      break;
+    case 3:
+      printf("This command requires the title of an entry in order to proceed.");
   }
 }
 
@@ -230,8 +232,7 @@ void get_password(char* indexpath) {
       /* File encryption */
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   char* homepath = getenv("HOME");
   char folderpath[500];
   setting_folderpath(homepath, folderpath);
@@ -254,12 +255,11 @@ int main(int argc, char *argv[])
 
   /* First, it's necessary to know how many commands have been passed. This first case below
   * executes when just the binary's name has been invoked, */
-  if (argc == 1)
-  {
+  if (argc == 1) {
     show_command_information(0);
   }
-  else if (argc == 2)
-  {
+  /* Here's the case when a command's been passed to the program, */
+  else if (argc == 2) {
     if (arginit == 0) {
       /* Initialization
       * Before doing anything, we need to know whether or not the password store in ~/.local/share/citpass
@@ -269,42 +269,16 @@ int main(int argc, char *argv[])
       init(folderpath, indexpath);
     }
     else if (argadd == 0) {
-      /* Addition of password */
-
       add_password(folderpath, indexpath, filepath);
     }
     else if (argls == 0) {
-      /* Addition of password */
       list_passwords(indexpath);
     }
     else if (argrm == 0) {
-      rm_password(indexpath);
-
+      show_command_information(3);
     }
     else if (argget == 0) {
-      get_password(indexpath);
-    }
-    else {
-      show_command_information(1);
-    }
-  }
-  else if (argc == 2) {
-    /* citpass will require an argument when retrieving and removing a password, the title of such a password.
-     * Other commands do not, so we catch those cases and promptly inform the user. */
-    printf("Too many arguments supplied.\n");
-
-    if (arginit == 0) {
-      show_command_information(2);
-    }
-    else if (argadd == 0) {
-      show_command_information(2);
-    }
-    else if (argls == 0){
-      show_command_information(2);
-    }
-    else if (argrm == 0) {
-    }
-    else if (argget == 0) {
+      show_command_information(3);
     }
     else {
       show_command_information(1);
@@ -321,8 +295,10 @@ int main(int argc, char *argv[])
       show_command_information(2);
     }
     else if (argrm == 0) {
+      rm_password(indexpath);
     }
     else if (argget == 0) {
+      get_password(indexpath);
     }
     else {
       show_command_information(1);
