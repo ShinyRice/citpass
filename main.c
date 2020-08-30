@@ -1,22 +1,25 @@
-#include <stdio.h> /* printf, scanf, fputs, fgets... */
+#include <sodium.h> /* Encryption */
+#include <stdio.h> /* fputs, fgets... */
 #include <stdlib.h> /* File I/O */
 #include <string.h> /* String manipulation */
 #include <sys/stat.h> /* Creating folders */
 #include <termios.h>
+#include <time.h>
 #include <unistd.h>
-#include <sodium.h> /* Encryption */
 
 /* Functions */
 /* Setting the path where passwords are store, done through an environment variable */
 void setting_folderpath(char* homepath, char folderpath[500]) {
   char* storelocation = getenv("CITPASS_STORE");
 
-  if (strncmp(storelocation, "", 400) == 0) {
-    strncpy(folderpath, homepath, 400);
-    strncat(folderpath, "/.local/share/citpass", 400);
+  /* If storelocation is NULL, that is, it's an empty string, we jump to the else case. If it's not empty
+   * we use it as the password folder location */
+  if (storelocation) {
+    strncpy(folderpath, storelocation, 400);
   }
   else {
-    strncpy(folderpath, storelocation, 400);
+    strncpy(folderpath, homepath, 400);
+    strncat(folderpath, "/.local/share/citpass", 400);
   }
 }
 
@@ -56,6 +59,9 @@ void show_command_information(int situation) {
       break;
     case 3:
       puts("This command requires the title of an entry in order to proceed.");
+      break;
+    case 4:
+      puts("Too many arguments have been passed.");
   }
 }
 
@@ -77,10 +83,15 @@ static char* rand_string(char* str, size_t size) {
 void init(char* folderpath, char* indexpath) {
 /* Here, we check if the folder exists, */
   if (access(folderpath, F_OK) != -1) {
-    printf("The folder at %s exists.\n", folderpath);
+    fputs("The folder at ", stdout);
+    fputs(folderpath, stdout);
+    fputs(" exists.\n", stdout);
+
     if (access(indexpath, F_OK) != -1) {
       /* And here, we check if the index file within exists as well, */
-      printf("The index file at %s exists as well. No action necessary.\n", indexpath);
+      fputs("The index file at ", stdout);
+      fputs(indexpath, stdout);
+      fputs(" exists as well. No action necessary.\n", stdout);
     }
     else {
       /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
@@ -92,7 +103,9 @@ void init(char* folderpath, char* indexpath) {
     }
   }
   else {
-    printf("The folder at %s doesn't exist. Creating it.\n", folderpath);
+    fputs("The folder at ", stdout);
+    fputs(folderpath, stdout);
+    fputs(" doesn't exist. Creating it.\n", stdout);
     if (mkdir(folderpath, 0700) == -1) {
       puts("Creating folder failed. Aborting.");
     }
@@ -108,12 +121,13 @@ void init(char* folderpath, char* indexpath) {
 
 /* Adding a password to the folder, and adding the random filename to the index */
 void add_password(char* folderpath, char* indexpath, char* filepath) {
-  char randstr[100];
+  char randstr[50];
   char title[100];
   char password[100];
   char username[100];
   char url[200];
   char notes[1000];
+  char indexentry[160];
 
   /* Here, we check if the folder where passwords are stored exists, */
   if (access(folderpath, F_OK) != -1) {
@@ -128,13 +142,12 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
 
       FILE *fileadd;
       fileadd = fopen(filepath, "a");
-      puts("Title: ");
+      fputs("Title: ", stdout);
       fgets(title, 100, stdin);
       fputs("Title: ", fileadd);
       fputs(title, fileadd);
-      fputs("\n", fileadd);
 
-      puts("Password: ");
+      fputs("Password: ", stdout);
 
       /* These 5 lines here are required for hiding password input from being outputted */
       struct termios oldt;
@@ -151,25 +164,22 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
 
       fputs("Password: ", fileadd);
       fputs(password, fileadd);
-      fputs("\n", fileadd);
+      fputs("\n", stdout);
 
-      puts("Username: ");
+      fputs("Username: ", stdout);
       fgets(username, 100, stdin);
       fputs("Username: ", fileadd);
       fputs(username, fileadd);
-      fputs("\n", fileadd);
 
-      puts("URL: ");
+      fputs("URL: ", stdout);
       fgets(url, 200, stdin);
       fputs("URL: ", fileadd);
       fputs(url, fileadd);
-      fputs("\n", fileadd);
 
-      puts("Notes: ");
+      fputs("Notes: ", stdout);
       fgets(notes, 1000, stdin);
       fputs("Notes: ", fileadd);
       fputs(notes, fileadd);
-      fputs("\n", fileadd);
 
       fclose(fileadd);
 
@@ -177,8 +187,13 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
       FILE *indexadd;
       indexadd = fopen(indexpath, "a");
 
-      fprintf(indexadd, "%s,", title);
-      fprintf(indexadd, "%s", randstr);
+      fputs(title, indexadd);
+      fputs(",", indexadd);
+      strncat(indexentry, title, 150);
+      strncat(indexentry, ",", 150);
+      strncat(indexentry, randstr, 150);
+      fputs(randstr, indexadd);
+      fputs("\n", indexadd);
 
       fclose(indexadd);
    }
@@ -187,7 +202,9 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
    }
  }
  else {
-   printf("The folder at %s doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", folderpath);
+   fputs("The folder at ", stdout);
+   fputs(folderpath, stdout);
+   fputs(" doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", stdout);
  }
 }
 
@@ -231,23 +248,26 @@ void get_password(char* indexpath) {
 
       /* Print out list of entries */
 
+      /* Index file encryption */
+
+      fclose(indexfile);
+
       /* User selects entry */
 
       /* Password file decryption */
 
-      /* Password is printed to stdout */
+      /* Password is printed to stdout/piped to clipboard manager */
 
       /* Password file encryption */
-
-      fclose(indexfile);
-
-      /* Index file encryption */
 }
 
 int main(int argc, char *argv[]) {
   char* homepath = getenv("HOME");
   char folderpath[500];
   setting_folderpath(homepath, folderpath);
+
+  strncpy(folderpath, homepath, 400);
+  strncat(folderpath, "/.local/share/citpass", 400);
 
   char indexpath[500];
   strncpy(indexpath, folderpath, 400);
@@ -276,6 +296,8 @@ int main(int argc, char *argv[]) {
       init(folderpath, indexpath);
     }
     else if (argadd == 0) {
+      /* We initialize the seed for generating random strings, */
+      srand(time(NULL));
       add_password(folderpath, indexpath, filepath);
     }
     else if (argls == 0) {
@@ -291,7 +313,8 @@ int main(int argc, char *argv[]) {
       show_command_information(1);
     }
   }
-  else if (argc > 2) {
+  /* And this is when a command's been passed as well as one argument, */
+  else if (argc == 3) {
     if (arginit == 0) {
       show_command_information(2);
     }
@@ -310,6 +333,9 @@ int main(int argc, char *argv[]) {
     else {
       show_command_information(1);
     }
+  }
+  else {
+    show_command_information(4);
   }
   return 0;
 }
