@@ -1,6 +1,6 @@
 # citpass - "See it pass"
 
-**I've hardly got any code written, I'm not sure how long it will take me to get this to a usable state. Don't depend on this for now.**
+**There's some code written, but I haven't gotten to file encryption yet. I'm not sure how long it will take me to get this to a usable state. Don't depend on this for now.**
 
 This is a simple password manager for Linux, inspired in part by [pass](https://www.passwordstore.org/).
 
@@ -9,7 +9,7 @@ However, citpass differs from it, by
 
 - Storing passwords somewhat differently. It does store each password in a separate file, along with
 metadata, but filenames are random, and an encrypted index file is used to point the user to the correct
-password
+password. This idea has been shamelessly stolen from [pwd.sh](https://github.com/drduh/pwd.sh)
 
 - Being written in C99
 
@@ -19,12 +19,13 @@ password
 
 For now, I've only thought of making it do five things,
 
-- Creating the folder where passwords are stored and corresponding index file, which is hardcoded for now to $HOME/.local/share/citpass
+- Creating the directory where passwords are stored and corresponding index file, which defaults to $HOME/.local/share/citpass,
+but the directory path can be set through the environment variable CITPASS_DIR
 
-- Adding passwords to this file. Each password will have metadata associated to it stored in the file too,
+- Adding passwords to the directory. Each password will have metadata associated to it stored in the file too,
 with a format taken after KeePass, storing title, username, password, URL and notes about the service
 
-- Listing passwords
+- Listing all passwords
 
 - Removing passwords and associated metadata
 
@@ -51,20 +52,19 @@ depend on a particular shell.
 
 - I honestly don't think that a password manager needs to deal with any sort of synchronization between systems.
 Even if said synchronization is mostly delegated to a separate program, as many things in pass are.
-Well, folders *do* lend themselves to synchronizing with git, but in citpass' case, having a git
-repo for a single file/folder with one file doesn't make a lot of sense.
 
 About the first point, I know that is covered by [pass-tomb](https://github.com/roddhjav/pass-tomb), but
 that is not exactly default behaviour, it requires another separate program (which looks promising actually),
 and the cherry on top is that it requires systemd. Since I've already said Bash is bloat, I believe you
 can guess correctly what's my opinion on systemd, so let's not get into that.
 
-About the second point, I'm aware there's spm, written in POSIX shell. Its design is, however, flawed in the same
+About the second point, I'm aware there's [tpm](https://github.com/nmeum/tpm/), as well as [spm](https://notabug.org/kl3/spm/),
+and a myriad other small/smaller password managers written in POSIX shell. Most of them, however, have the same "flawed" defaults, in the
 way I described in the first point.
 
 My reasons to start writing my own password manager are feeble, I'll admit that much. I can just work
-around what I percieve to be wrong with these. But, I wanted to practice writing a program,
-and I didn't want to write something that has been done before to death.
+around what I percieve to be wrong with these. But, I wanted to learn C through practice, by writing a useful
+program (to me), and I didn't want to write something that has been done before to death.
 
 # Building and installation
 
@@ -74,7 +74,7 @@ to glibc, don't think that'll be hard.
 
 Compile time dependencies are GCC, Make, Linux header files and a C standard library.
 
-In your shell, change directory to the source folder, and run
+In your shell, change directory to the source directory, and run
 
 ```
 $ make

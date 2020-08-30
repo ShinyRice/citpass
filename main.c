@@ -8,18 +8,18 @@
 #include <unistd.h>
 
 /* Functions */
-/* Setting the path where passwords are store, done through an environment variable */
-void setting_folderpath(char* homepath, char folderpath[500]) {
-  char* storelocation = getenv("CITPASS_STORE");
+/* Setting the path to the directory where passwords are stored, done through an environment variable */
+void setting_dirpath(char* homepath, char dirpath[500]) {
+  char* storelocation = getenv("CITPASS_DIR");
 
   /* If storelocation is NULL, that is, it's an empty string, we jump to the else case. If it's not empty
    * we use it as the password folder location */
   if (storelocation) {
-    strncpy(folderpath, storelocation, 400);
+    strncpy(dirpath, storelocation, 400);
   }
   else {
-    strncpy(folderpath, homepath, 400);
-    strncat(folderpath, "/.local/share/citpass", 400);
+    strncpy(dirpath, homepath, 400);
+    strncat(dirpath, "/.local/share/citpass", 400);
   }
 }
 
@@ -80,11 +80,11 @@ static char* rand_string(char* str, size_t size) {
 }
 
 /* Initializing store */
-void init(char* folderpath, char* indexpath) {
-/* Here, we check if the folder exists, */
-  if (access(folderpath, F_OK) != -1) {
+void init(char* dirpath, char* indexpath) {
+/* Here, we check if the directory exists, */
+  if (access(dirpath, F_OK) != -1) {
     fputs("The folder at ", stdout);
-    fputs(folderpath, stdout);
+    fputs(dirpath, stdout);
     fputs(" exists.\n", stdout);
 
     if (access(indexpath, F_OK) != -1) {
@@ -104,9 +104,9 @@ void init(char* folderpath, char* indexpath) {
   }
   else {
     fputs("The folder at ", stdout);
-    fputs(folderpath, stdout);
+    fputs(dirpath, stdout);
     fputs(" doesn't exist. Creating it.\n", stdout);
-    if (mkdir(folderpath, 0700) == -1) {
+    if (mkdir(dirpath, 0700) == -1) {
       puts("Creating folder failed. Aborting.");
     }
     else {
@@ -120,22 +120,24 @@ void init(char* folderpath, char* indexpath) {
 }
 
 /* Adding a password to the folder, and adding the random filename to the index */
-void add_password(char* folderpath, char* indexpath, char* filepath) {
+void add_password(char* dirpath, char* indexpath, char* filepath) {
   char randstr[50];
   char title[100];
   char password[100];
   char username[100];
   char url[200];
   char notes[1000];
-  char indexentry[160];
+  char indexentry[150];
 
   /* Here, we check if the folder where passwords are stored exists, */
-  if (access(folderpath, F_OK) != -1) {
+  if (access(dirpath, F_OK) != -1) {
    /* And here, we check if the index file within exists too. In this case, since they both exist, we do the deed. */
     if (access(indexpath, F_OK) != -1) {
-      /* We generate a random string, */
-      rand_string(randstr, 100);
-      /* Append it to the folder path, */
+      /* We initialize the seed for generating random strings, */
+      srand(time(NULL));
+      /* then generate such a string, */
+      rand_string(randstr, 50);
+      /* and append it to the folder path, */
       strncat(filepath, randstr, 500);
 
       /* File is opened, and subsequently the user fills the file with the password and relevant metadata */
@@ -187,13 +189,11 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
       FILE *indexadd;
       indexadd = fopen(indexpath, "a");
 
-      fputs(title, indexadd);
-      fputs(",", indexadd);
-      strncat(indexentry, title, 150);
-      strncat(indexentry, ",", 150);
-      strncat(indexentry, randstr, 150);
-      fputs(randstr, indexadd);
-      fputs("\n", indexadd);
+      strncat(indexentry, randstr, 140);
+      strncat(indexentry, ",", 140);
+      strncat(indexentry, title, 140);
+
+      fputs(indexentry, indexadd);
 
       fclose(indexadd);
    }
@@ -203,20 +203,16 @@ void add_password(char* folderpath, char* indexpath, char* filepath) {
  }
  else {
    fputs("The folder at ", stdout);
-   fputs(folderpath, stdout);
+   fputs(dirpath, stdout);
    fputs(" doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", stdout);
  }
 }
 
 void list_passwords(char* indexpath) {
-      FILE *indexfile;
-      indexfile = fopen(indexpath, "r");
-
       /* Index file decryption */
 
-      /* Appending an empty entry to the end of the database file */
-
-      /* User now fills the entry with information */
+      FILE *indexfile;
+      indexfile = fopen(indexpath, "r");
 
       fclose(indexfile);
 
@@ -262,20 +258,21 @@ void get_password(char* indexpath) {
 }
 
 int main(int argc, char *argv[]) {
-  char* homepath = getenv("HOME");
-  char folderpath[500];
-  setting_folderpath(homepath, folderpath);
+  char homepath[100];
+  char dirpath[500];
+  strncpy(homepath, getenv("HOME"), 100);
+  setting_dirpath(homepath, dirpath);
 
-  strncpy(folderpath, homepath, 400);
-  strncat(folderpath, "/.local/share/citpass", 400);
+  strncpy(dirpath, homepath, 400);
+  strncat(dirpath, "/.local/share/citpass", 400);
 
   char indexpath[500];
-  strncpy(indexpath, folderpath, 400);
-  strncat(indexpath, "/index", 400); /* In the future, this'll be set by the user, through a configuration file or an argument */
+  strncpy(indexpath, dirpath, 400);
+  strncat(indexpath, "/index", 400);
 
   char filepath[500];
   /* The full path of the file to be decrypted and opened isn't completely specified, that will be done according to user input */
-  strncpy(filepath, folderpath, 400);
+  strncpy(filepath, dirpath, 400);
   strncat(filepath, "/", 400);
 
   /* Now, it's necessary to parse the command passed to the program, so */
@@ -293,12 +290,10 @@ int main(int argc, char *argv[]) {
   /* Here's the case when a command's been passed to the program, */
   else if (argc == 2) {
     if (arginit == 0) {
-      init(folderpath, indexpath);
+      init(dirpath, indexpath);
     }
     else if (argadd == 0) {
-      /* We initialize the seed for generating random strings, */
-      srand(time(NULL));
-      add_password(folderpath, indexpath, filepath);
+      add_password(dirpath, indexpath, filepath);
     }
     else if (argls == 0) {
       list_passwords(indexpath);
