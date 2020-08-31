@@ -3,6 +3,7 @@
 #include <stdlib.h> /* File I/O */
 #include <string.h> /* String manipulation */
 #include <sys/stat.h> /* Creating folders */
+#include <sys/types.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
@@ -80,7 +81,7 @@ static char* rand_string(char* str, size_t size) {
 }
 
 /* Initializing store */
-void init(char* dirpath, char* indexpath) {
+void initalization(char* dirpath, char* indexpath) {
 /* Here, we check if the directory exists, */
   if (access(dirpath, F_OK) != -1) {
     fputs("The folder at ", stdout);
@@ -213,8 +214,40 @@ void list_passwords(char* indexpath) {
 
       FILE *indexfile;
       indexfile = fopen(indexpath, "r");
+      int fd;
+
+      /* It's necessary to find out the size of the file.
+       * I'll set a large upper limit for the file, 1 MB. */
+
+      fd = fileno(indexfile);
+      struct stat buf;
+      char* buffer;
+      fstat(fd, &buf);
+      off_t filesize = buf.st_size;
+
+      /* Error handling */
+      if (fd == -1) {
+        fclose(indexfile);
+        exit(EXIT_FAILURE);
+      }
+
+      /* Error handling */
+      if ((fstat(fd, &buf) != 0) || (!S_ISREG(buf.st_mode))) {
+        /* Handle error */
+        fclose(indexfile);
+        exit(EXIT_FAILURE);
+      }
+
+      filesize = buf.st_size;
+
+      buffer = (char*)malloc(filesize);
+
+      /* Error handling */
+      if (buffer == NULL) {
+      }
 
       char c;
+      char* charchain;
       if (indexfile) {
         while ((c = getc(indexfile)) != EOF) {
           putchar(c);
@@ -237,13 +270,13 @@ void rm_password(char* indexpath) {
 
       /* Print out list of entries */
 
+      /* Index file encryption */
+
       /* User selects entry */
 
       /* Entry is deleted */
 
       fclose(filerm);
-
-      /* Index file encryption */
 }
 
 void get_password(char* indexpath) {
@@ -286,11 +319,11 @@ int main(int argc, char *argv[]) {
   strncat(filepath, "/", 400);
 
   /* Now, it's necessary to parse the command passed to the program, so */
-  int arginit = strncmp(argv[1], "init", 5);
-  int argadd = strncmp(argv[1], "add", 5);
-  int argls = parse_ls(argv[1]);
-  int argrm = strncmp(argv[1], "rm", 5);
-  int argget = strncmp(argv[1], "get", 5);
+  int init = strncmp(argv[1], "init", 5);
+  int add = strncmp(argv[1], "add", 5);
+  int ls = parse_ls(argv[1]);
+  int rm = strncmp(argv[1], "rm", 5);
+  int get = strncmp(argv[1], "get", 5);
 
   /* First, it's necessary to know how many commands have been passed. This first case below
   * executes when just the binary's name has been invoked, */
@@ -299,19 +332,19 @@ int main(int argc, char *argv[]) {
   }
   /* Here's the case when a command's been passed to the program, */
   else if (argc == 2) {
-    if (arginit == 0) {
-      init(dirpath, indexpath);
+    if (init == 0) {
+      initalization(dirpath, indexpath);
     }
-    else if (argadd == 0) {
+    else if (add == 0) {
       add_password(dirpath, indexpath, filepath);
     }
-    else if (argls == 0) {
+    else if (ls == 0) {
       list_passwords(indexpath);
     }
-    else if (argrm == 0) {
+    else if (rm == 0) {
       show_command_information(3);
     }
-    else if (argget == 0) {
+    else if (get == 0) {
       show_command_information(3);
     }
     else {
@@ -320,19 +353,19 @@ int main(int argc, char *argv[]) {
   }
   /* And this is when a command's been passed as well as one argument, */
   else if (argc == 3) {
-    if (arginit == 0) {
+    if (init == 0) {
       show_command_information(2);
     }
-    else if (argadd == 0) {
+    else if (add == 0) {
       show_command_information(2);
     }
-    else if (argls == 0){
+    else if (ls == 0){
       show_command_information(2);
     }
-    else if (argrm == 0) {
+    else if (rm == 0) {
       rm_password(indexpath);
     }
-    else if (argget == 0) {
+    else if (get == 0) {
       get_password(indexpath);
     }
     else {
