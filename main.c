@@ -189,7 +189,7 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
       FILE *indexadd;
       indexadd = fopen(indexpath, "a");
 
-      strncat(indexentry, randstr, 140);
+      strncpy(indexentry, randstr, 140);
       strncat(indexentry, ",", 140);
       strncat(indexentry, title, 140);
 
@@ -213,6 +213,16 @@ void list_passwords(char* indexpath) {
 
       FILE *indexfile;
       indexfile = fopen(indexpath, "r");
+
+      char c;
+      if (indexfile) {
+        while ((c = getc(indexfile)) != EOF) {
+          putchar(c);
+        }
+      }
+      else {
+        puts("Failed to open index file.");
+      }
 
       fclose(indexfile);
 

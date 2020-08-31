@@ -19,7 +19,7 @@ password. This idea has been shamelessly stolen from [pwd.sh](https://github.com
 
 For now, I've only thought of making it do five things,
 
-- Creating the directory where passwords are stored and corresponding index file, which defaults to $HOME/.local/share/citpass,
+- Creating the directory where passwords are stored and corresponding index file, which defaults to ~/.local/share/citpass,
 but the directory path can be set through the environment variable CITPASS_DIR
 
 - Adding passwords to the directory. Each password will have metadata associated to it stored in the file too,
