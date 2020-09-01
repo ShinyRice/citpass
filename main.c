@@ -79,11 +79,14 @@ static char* rand_string(char* str, size_t size) {
   return str;
 }
 
-void count_lines(char* buffer, size_t size) {
-
-}
-
 void parse_buffer(char* buffer, size_t size) {
+  int lines = 0;
+  int m = 0;
+  for (m = 0, m < size - 1, m++) {
+    if (buffer[m] == '\n') {
+      lines++;
+    }
+  }
   int n = 0;
   while (buffer[n] != '\n' && n < size - 1) {
     n++;
@@ -354,11 +357,12 @@ int main(int argc, char *argv[]) {
 
   /* First, it's necessary to know how many commands have been passed. This first case below
   * executes when just the binary's name has been invoked, */
-  if (argc == 1) {
+  switch (argc)
+  case 1:
     show_command_information(0);
-  }
-  /* Here's the case when a command's been passed to the program, */
-  else if (argc == 2) {
+    break;
+  case 2:
+    /* Here's the case when a command's been passed to the program, */
     if (init == 0) {
       initalization(dirpath, indexpath);
     }
@@ -377,9 +381,9 @@ int main(int argc, char *argv[]) {
     else {
       show_command_information(1);
     }
-  }
-  /* And this is when a command's been passed as well as one argument, */
-  else if (argc == 3) {
+    break;
+  case 3:
+    /* And this is when a command's been passed as well as one argument, */
     if (init == 0) {
       show_command_information(2);
     }
@@ -398,9 +402,9 @@ int main(int argc, char *argv[]) {
     else {
       show_command_information(1);
     }
-  }
-  else {
+    break;
+  default:
     show_command_information(4);
-  }
+
   return 0;
 }
