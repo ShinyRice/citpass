@@ -12,7 +12,6 @@
 /* Setting the path to the directory where passwords are stored, done through an environment variable */
 void setting_dirpath(char* homepath, char dirpath[500]) {
   char* storelocation = getenv("CITPASS_DIR");
-
   /* If storelocation is NULL, that is, it's an empty string, we jump to the else case. If it's not empty
    * we use it as the password folder location */
   if (storelocation) {
@@ -98,8 +97,7 @@ void initalization(char* dirpath, char* indexpath) {
       /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
       puts("The index file doesn't exist. Creating it.");
 
-      FILE *indexcheck;
-      indexcheck = fopen(indexpath, "w");
+      FILE *indexcheck = fopen(indexpath, "w");
       fclose(indexcheck);
     }
   }
@@ -113,8 +111,7 @@ void initalization(char* dirpath, char* indexpath) {
     else {
       puts("Creating index file within folder as well.");
 
-      FILE *indexcheck;
-      indexcheck = fopen(indexpath, "w");
+      FILE *indexcheck = fopen(indexpath, "w");
       fclose(indexcheck);
     }
   }
@@ -142,9 +139,7 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
       strncat(filepath, randstr, 500);
 
       /* File is opened, and subsequently the user fills the file with the password and relevant metadata */
-
-      FILE *fileadd;
-      fileadd = fopen(filepath, "a");
+      FILE *fileadd = fopen(filepath, "a");
       fputs("Title: ", stdout);
       fgets(title, 100, stdin);
       fputs("Title: ", fileadd);
@@ -152,7 +147,7 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
 
       fputs("Password: ", stdout);
 
-      /* These 5 lines here are required for hiding password input from being outputted */
+      /* These 5 lines down here are required for preventing password input from being shown */
       struct termios oldt;
       tcgetattr(STDIN_FILENO, &oldt);
       struct termios newt = oldt;
@@ -187,8 +182,7 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
       fclose(fileadd);
 
       /* File's closed, and thus now we append the title of the entry and corresponding randomized filename to the end of the index file */
-      FILE *indexadd;
-      indexadd = fopen(indexpath, "a");
+      FILE *indexadd = fopen(indexpath, "a");
 
       strncpy(indexentry, randstr, 140);
       strncat(indexentry, ",", 140);
@@ -210,94 +204,96 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
 }
 
 void list_passwords(char* indexpath) {
-      /* Index file decryption */
+/* Index file decryption */
+  FILE *indexfile = fopen(indexpath, "r");
+  /* Error handling */
+  if (indexfile == NULL) {
+    puts("Failed to open index file. Aborting.");
+    fclose(indexfile);
+    exit(EXIT_FAILURE);
+  }
 
-      FILE *indexfile;
-      indexfile = fopen(indexpath, "r");
-      int fd;
+  /* It's necessary to find out the size of the file. */
 
-      /* It's necessary to find out the size of the file.
-       * I'll set a large upper limit for the file, 1 MB. */
+  /* File descriptor being set, */
+  int fd = fileno(indexfile);
+  struct stat buf;
+  /* With fstat() we get file attributes and put them in buf. buf.st_size is
+   * the size of the file in bytes. */
+  fstat(fd, &buf);
+  off_t filesize = buf.st_size;
 
-      fd = fileno(indexfile);
-      struct stat buf;
-      char* buffer;
-      fstat(fd, &buf);
-      off_t filesize = buf.st_size;
+  /* I'll set a large upper limit for the file, 1 MB. */
+  if (filesize > 1000000) {
+    puts("Index file is larger than 1 MB. Aborting.");
+    fclose(indexfile);
+    exit(EXIT_FAILURE);
+  }
 
-      /* Error handling */
-      if (fd == -1) {
-        fclose(indexfile);
-        exit(EXIT_FAILURE);
-      }
+  /* Error handling */
+  if ((fd == -1) || (fstat(fd, &buf) != 0) || (!S_ISREG(buf.st_mode))) {
+    puts("Could not read index file. Aborting.");
+    fclose(indexfile);
+    exit(EXIT_FAILURE);
+  }
 
-      /* Error handling */
-      if ((fstat(fd, &buf) != 0) || (!S_ISREG(buf.st_mode))) {
-        /* Handle error */
-        fclose(indexfile);
-        exit(EXIT_FAILURE);
-      }
+  /* File's characters will be stored at this pointer, we're setting buffer up to point
+   * at the allocated memory with the file we're going to read's filesize */
+  char* buffer = (char*)malloc(filesize);
 
-      filesize = buf.st_size;
+  /* Error handling */
+  if (buffer == NULL) {
+    puts("Failed to allocate needed memory for reading index file. Aborting.");
+    fclose(indexfile);
+    exit(EXIT_FAILURE);
+  }
 
-      buffer = (char*)malloc(filesize);
+  char c;
+  int n = 0;
+  while ((c = getc(indexfile)) != EOF) {
+    buffer[n] = c;
+    n++;
+  }
 
-      /* Error handling */
-      if (buffer == NULL) {
-      }
+  fclose(indexfile);
 
-      char c;
-      char* charchain;
-      if (indexfile) {
-        while ((c = getc(indexfile)) != EOF) {
-          putchar(c);
-        }
-      }
-      else {
-        puts("Failed to open index file.");
-      }
-
-      fclose(indexfile);
-
-      /* Index file encryption */
+  /* Index file encryption */
 }
 
 void rm_password(char* indexpath) {
-      FILE *filerm;
-      filerm = fopen(indexpath, "rw");
+  FILE *indexfile = fopen(indexpath, "rw");
 
-      /* Index file decryption */
+  /* Index file decryption */
 
-      /* Print out list of entries */
+  /* Print out list of entries */
 
-      /* Index file encryption */
+  /* Index file encryption */
 
-      /* User selects entry */
+  /* User selects entry */
 
-      /* Entry is deleted */
+  /* Entry is deleted */
 
-      fclose(filerm);
+  fclose(indexfile);
 }
 
 void get_password(char* indexpath) {
-      FILE *indexfile;
-      indexfile = fopen(indexpath, "r");
+  FILE *indexfile = fopen(indexpath, "r");
 
-      /* Index file decryption */
+  /* Index file decryption */
 
-      /* Print out list of entries */
+  /* Print out list of entries */
 
-      /* Index file encryption */
+  /* Index file encryption */
 
-      fclose(indexfile);
+  fclose(indexfile);
 
-      /* User selects entry */
+  /* User selects entry */
 
-      /* Password file decryption */
+  /* Password file decryption */
 
-      /* Password is printed to stdout/piped to clipboard manager */
+  /* Password is printed to stdout/piped to clipboard manager */
 
-      /* Password file encryption */
+  /* Password file encryption */
 }
 
 int main(int argc, char *argv[]) {
