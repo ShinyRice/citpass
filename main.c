@@ -4,8 +4,8 @@
 #include <string.h> /* String manipulation */
 #include <sys/stat.h> /* Creating folders */
 #include <sys/types.h>
-#include <termios.h>
-#include <time.h>
+#include <termios.h> /* Telling the terminal to not show input */
+#include <time.h> /* Initializing seed for random generation */
 #include <unistd.h>
 
 /* Functions */
@@ -77,6 +77,17 @@ static char* rand_string(char* str, size_t size) {
     str[size] = '\0';
   }
   return str;
+}
+
+void count_lines(char* buffer, size_t size) {
+
+}
+
+void parse_buffer(char* buffer, size_t size) {
+  int n = 0;
+  while (buffer[n] != '\n' && n < size - 1) {
+    n++;
+  }
 }
 
 /* Initializing store */
@@ -204,7 +215,7 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
 }
 
 void list_passwords(char* indexpath) {
-/* Index file decryption */
+  /* Index file decryption */
   FILE *indexfile = fopen(indexpath, "r");
   /* Error handling */
   if (indexfile == NULL) {
@@ -217,22 +228,29 @@ void list_passwords(char* indexpath) {
 
   /* File descriptor being set, */
   int fd = fileno(indexfile);
+  /* Error handling */
+  if (fd == -1) {
+    puts("Could not read index file. Aborting.");
+    fclose(indexfile);
+    exit(EXIT_FAILURE);
+  }
+
   struct stat buf;
   /* With fstat() we get file attributes and put them in buf. buf.st_size is
    * the size of the file in bytes. */
   fstat(fd, &buf);
   off_t filesize = buf.st_size;
 
-  /* I'll set a large upper limit for the file, 1 MB. */
-  if (filesize > 1000000) {
-    puts("Index file is larger than 1 MB. Aborting.");
+  /* Error handling */
+  if ((fstat(fd, &buf) != 0) || (!S_ISREG(buf.st_mode))) {
+    puts("Could not read index file. Aborting.");
     fclose(indexfile);
     exit(EXIT_FAILURE);
   }
 
-  /* Error handling */
-  if ((fd == -1) || (fstat(fd, &buf) != 0) || (!S_ISREG(buf.st_mode))) {
-    puts("Could not read index file. Aborting.");
+  /* I'll set a large upper limit for the file, 1 MB. */
+  if (filesize > 1000000) {
+    puts("Index file is larger than 1 MB. Aborting.");
     fclose(indexfile);
     exit(EXIT_FAILURE);
   }
@@ -248,12 +266,25 @@ void list_passwords(char* indexpath) {
     exit(EXIT_FAILURE);
   }
 
+  /* And so we finally write the file to memory. getc reads one character at a time,
+   * every time it is called it reads the next character */
   char c;
   int n = 0;
   while ((c = getc(indexfile)) != EOF) {
     buffer[n] = c;
     n++;
   }
+
+  /* Now, we get how many characters are stored in the buffer, */
+  size_t size = (int) sizeof(buffer)/sizeof(char);
+  printf("%lu", size);
+
+  /* As well as the amount of lines in the buffer, done by counting
+   * newline characters and adding one to that, */
+
+  parse_buffer(buffer, size);
+
+  free(buffer);
 
   fclose(indexfile);
 
