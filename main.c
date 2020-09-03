@@ -8,6 +8,9 @@
 #include <time.h> /* Initializing seed for random generation */
 #include <unistd.h>
 
+#define RANDSTR_LEN 50
+#define TITLE_LEN 100
+
 /* Functions */
 /* Setting the path to the directory where passwords are stored, done through an environment variable */
 void setting_dirpath(char* homepath, char dirpath[500]) {
@@ -79,18 +82,50 @@ static char* rand_string(char* str, size_t size) {
   return str;
 }
 
-void parse_buffer(char* buffer, size_t size) {
+void parse_index_file(char* buffer, size_t size) {
+  /* Let's first figure out how many lines we have in the file, by counting the amount of newline characters, */
   int lines = 0;
-  int m = 0;
-  for (m = 0, m < size - 1, m++) {
+  for (int m = 0; m < size - 1; m++) {
     if (buffer[m] == '\n') {
       lines++;
     }
   }
+  /* Since we don't know how many passwords a user has stored in the folder,
+   * it's necessary to dynamically allocate memory for the array that'll hold
+   * the title strings. It's a 2D character array, so a 1D string array.
+   * We already know how long titles can get, as defined in this constant.
+   * A pointer to a pointer is more or less a 2D array. */
+  char **titles = malloc(lines*sizeof(char));
+  /* Error handling */
+  if (titles == NULL) {
+    puts("Failed to allocate needed memory for reading index file. Aborting.");
+    free(titles);
+    free(buffer);
+    exit(EXIT_FAILURE);
+  }
+  for(int i = 0; i < lines; i++) {
+    titles[i] = malloc(TITLE_LEN*sizeof(char));
+    /* Error handling */
+    if (titles[i] == NULL) {
+      puts("Failed to allocate needed memory for reading index file. Aborting.");
+      free(titles);
+      free(buffer);
+      exit(EXIT_FAILURE);
+    }
+  }
   int n = 0;
-  while (buffer[n] != '\n' && n < size - 1) {
+  int m = 0;
+  while (n < size - 1) {
+    if (buffer[n] == ',') {
+      while (buffer[n] != '\n' && n < size - 1) {
+        titles[m][n] = buffer[n];
+        n++;
+      }
+      m++;
+    }
     n++;
   }
+  free(titles);
 }
 
 /* Initializing store */
@@ -133,8 +168,8 @@ void initalization(char* dirpath, char* indexpath) {
 
 /* Adding a password to the folder, and adding the random filename to the index */
 void add_password(char* dirpath, char* indexpath, char* filepath) {
-  char randstr[50];
-  char title[100];
+  char randstr[RANDSTR_LEN];
+  char title[TITLE_LEN];
   char password[100];
   char username[100];
   char url[200];
@@ -278,6 +313,8 @@ void list_passwords(char* indexpath) {
     n++;
   }
 
+  fclose(indexfile);
+
   /* Now, we get how many characters are stored in the buffer, */
   size_t size = (int) sizeof(buffer)/sizeof(char);
   printf("%lu", size);
@@ -285,11 +322,9 @@ void list_passwords(char* indexpath) {
   /* As well as the amount of lines in the buffer, done by counting
    * newline characters and adding one to that, */
 
-  parse_buffer(buffer, size);
+  parse_index_file(buffer, size);
 
   free(buffer);
-
-  fclose(indexfile);
 
   /* Index file encryption */
 }
@@ -355,10 +390,10 @@ int main(int argc, char *argv[]) {
   int rm = strncmp(argv[1], "rm", 5);
   int get = strncmp(argv[1], "get", 5);
 
-  /* First, it's necessary to know how many commands have been passed. This first case below
-  * executes when just the binary's name has been invoked, */
-  switch (argc)
+  /* First, it's necessary to know how many commands have been passed. */
+  switch (argc) {
   case 1:
+    /* This first case below executes when just the binary's name has been invoked, */
     show_command_information(0);
     break;
   case 2:
@@ -405,6 +440,6 @@ int main(int argc, char *argv[]) {
     break;
   default:
     show_command_information(4);
-
+  }
   return 0;
 }
