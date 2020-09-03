@@ -85,8 +85,8 @@ static char* rand_string(char* str, size_t size) {
 void parse_index_file(char* buffer, size_t size) {
   /* Let's first figure out how many lines we have in the file, by counting the amount of newline characters, */
   int lines = 0;
-  for (int m = 0; m < size - 1; m++) {
-    if (buffer[m] == '\n') {
+  for (int i = 0; i < size - 1; i++) {
+    if (buffer[i] == '\n') {
       lines++;
     }
   }
@@ -114,23 +114,31 @@ void parse_index_file(char* buffer, size_t size) {
     }
   }
   int n = 0;
-  int m = 0;
+  int p = 0;
   while (n < size - 1) {
     if (buffer[n] == ',') {
       while (buffer[n] != '\n' && n < size - 1) {
-        titles[m][n] = buffer[n];
+        titles[p][n] = buffer[n];
         n++;
       }
-      m++;
+      p++;
     }
     n++;
+  }
+  for(int i = 0; i < lines; i++) {
+    fputs(titles[i], stdout);
   }
   free(titles);
 }
 
 /* Initializing store */
 void initalization(char* dirpath, char* indexpath) {
-/* Here, we check if the directory exists, */
+  if (sodium_init() < 0) {
+    /* The library couldn't be initialized, it is not safe to use */
+    puts("File encryption is not available. Aborting.");
+    exit(EXIT_FAILURE);
+  }
+  /* Here, we check if the directory exists, */
   if (access(dirpath, F_OK) != -1) {
     fputs("The folder at ", stdout);
     fputs(dirpath, stdout);
@@ -168,6 +176,11 @@ void initalization(char* dirpath, char* indexpath) {
 
 /* Adding a password to the folder, and adding the random filename to the index */
 void add_password(char* dirpath, char* indexpath, char* filepath) {
+  if (sodium_init() < 0) {
+    /* The library couldn't be initialized, it is not safe to use */
+    puts("File encryption is not available. Aborting.");
+    exit(EXIT_FAILURE);
+  }
   char randstr[RANDSTR_LEN];
   char title[TITLE_LEN];
   char password[100];
@@ -253,6 +266,11 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
 }
 
 void list_passwords(char* indexpath) {
+  if (sodium_init() < 0) {
+    /* The library couldn't be initialized, it is not safe to use */
+    puts("File encryption is not available. Aborting.");
+    exit(EXIT_FAILURE);
+  }
   /* Index file decryption */
   FILE *indexfile = fopen(indexpath, "r");
   /* Error handling */
@@ -330,6 +348,11 @@ void list_passwords(char* indexpath) {
 }
 
 void rm_password(char* indexpath) {
+  if (sodium_init() < 0) {
+    /* The library couldn't be initialized, it is not safe to use */
+    puts("File encryption is not available. Aborting.");
+    exit(EXIT_FAILURE);
+  }
   FILE *indexfile = fopen(indexpath, "rw");
 
   /* Index file decryption */
@@ -346,6 +369,11 @@ void rm_password(char* indexpath) {
 }
 
 void get_password(char* indexpath) {
+  if (sodium_init() < 0) {
+    /* The library couldn't be initialized, it is not safe to use */
+    puts("File encryption is not available. Aborting.");
+    exit(EXIT_FAILURE);
+  }
   FILE *indexfile = fopen(indexpath, "r");
 
   /* Index file decryption */
