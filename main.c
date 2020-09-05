@@ -13,10 +13,11 @@
 
 /* Functions */
 /* Setting the path to the directory where passwords are stored, done through an environment variable */
-void setting_dirpath(char* homepath, char dirpath[500]) {
+void setting_dirpath(char* homepath, char* dirpath) {
   char* storelocation = getenv("CITPASS_DIR");
-  /* If storelocation is NULL, that is, it's an empty string, we jump to the else case. If it's not empty
-   * we use it as the password folder location */
+  /* If storelocation is NULL, that is, it's a pointer pointing to nothing, in other words, the environment
+   * variable hasn't been set and is just an empty string, we jump to the else case, since it's a boolean false.
+   * If it's not empty we use it as the password folder location */
   if (storelocation) {
     strncpy(dirpath, storelocation, 400);
   }
@@ -28,7 +29,7 @@ void setting_dirpath(char* homepath, char dirpath[500]) {
 
 /* Parsing possible commands for listing passwords */
 int parse_ls(char* list) {
-  int result;
+  int result = 1;
   if (strncmp(list, "ls", 5) == 0 || strncmp(list, "list", 5) == 0 || strncmp(list, "show", 5) == 0) {
     result = 0;
   }
@@ -84,12 +85,13 @@ static char* rand_string(char* str, size_t size) {
 
 void parse_index_file(char* buffer, size_t size) {
   /* Let's first figure out how many lines we have in the file, by counting the amount of newline characters, */
-  int lines = 0;
+  unsigned int lines = 0;
   for (int i = 0; i < size - 1; i++) {
     if (buffer[i] == '\n') {
       lines++;
     }
   }
+  printf("%i\n", lines);
   /* Since we don't know how many passwords a user has stored in the folder,
    * it's necessary to dynamically allocate memory for the array that'll hold
    * the title strings. It's a 2D character array, so a 1D string array.
@@ -103,7 +105,7 @@ void parse_index_file(char* buffer, size_t size) {
     free(buffer);
     exit(EXIT_FAILURE);
   }
-  for(int i = 0; i < lines; i++) {
+  for (int i = 0; i < lines; i++) {
     titles[i] = malloc(TITLE_LEN*sizeof(char));
     /* Error handling */
     if (titles[i] == NULL) {
@@ -117,15 +119,19 @@ void parse_index_file(char* buffer, size_t size) {
   int p = 0;
   while (n < size - 1) {
     if (buffer[n] == ',') {
+      n++;
+      int m = 0;
       while (buffer[n] != '\n' && n < size - 1) {
-        titles[p][n] = buffer[n];
+        titles[p][m] = buffer[n];
+        m++;
         n++;
       }
+      titles[p][m++] = '\0';
       p++;
     }
     n++;
   }
-  for(int i = 0; i < lines; i++) {
+  for (int i = 0; i < lines; i++) {
     fputs(titles[i], stdout);
   }
   free(titles);
@@ -133,11 +139,6 @@ void parse_index_file(char* buffer, size_t size) {
 
 /* Initializing store */
 void initalization(char* dirpath, char* indexpath) {
-  if (sodium_init() < 0) {
-    /* The library couldn't be initialized, it is not safe to use */
-    puts("File encryption is not available. Aborting.");
-    exit(EXIT_FAILURE);
-  }
   /* Here, we check if the directory exists, */
   if (access(dirpath, F_OK) != -1) {
     fputs("The folder at ", stdout);
@@ -176,11 +177,6 @@ void initalization(char* dirpath, char* indexpath) {
 
 /* Adding a password to the folder, and adding the random filename to the index */
 void add_password(char* dirpath, char* indexpath, char* filepath) {
-  if (sodium_init() < 0) {
-    /* The library couldn't be initialized, it is not safe to use */
-    puts("File encryption is not available. Aborting.");
-    exit(EXIT_FAILURE);
-  }
   char randstr[RANDSTR_LEN];
   char title[TITLE_LEN];
   char password[100];
@@ -266,11 +262,6 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
 }
 
 void list_passwords(char* indexpath) {
-  if (sodium_init() < 0) {
-    /* The library couldn't be initialized, it is not safe to use */
-    puts("File encryption is not available. Aborting.");
-    exit(EXIT_FAILURE);
-  }
   /* Index file decryption */
   FILE *indexfile = fopen(indexpath, "r");
   /* Error handling */
@@ -286,7 +277,7 @@ void list_passwords(char* indexpath) {
   int fd = fileno(indexfile);
   /* Error handling */
   if (fd == -1) {
-    puts("Could not read index file. Aborting.");
+    fputs("Could not read index file. Aborting.", stdout);
     fclose(indexfile);
     exit(EXIT_FAILURE);
   }
@@ -299,14 +290,14 @@ void list_passwords(char* indexpath) {
 
   /* Error handling */
   if ((fstat(fd, &buf) != 0) || (!S_ISREG(buf.st_mode))) {
-    puts("Could not read index file. Aborting.");
+    fputs("Could not read index file. Aborting.", stdout);
     fclose(indexfile);
     exit(EXIT_FAILURE);
   }
 
   /* I'll set a large upper limit for the file, 1 MB. */
   if (filesize > 1000000) {
-    puts("Index file is larger than 1 MB. Aborting.");
+    fputs("Index file is larger than 1 MB. Aborting.", stdout);
     fclose(indexfile);
     exit(EXIT_FAILURE);
   }
@@ -317,7 +308,7 @@ void list_passwords(char* indexpath) {
 
   /* Error handling */
   if (buffer == NULL) {
-    puts("Failed to allocate needed memory for reading index file. Aborting.");
+    fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
     fclose(indexfile);
     exit(EXIT_FAILURE);
   }
@@ -335,10 +326,8 @@ void list_passwords(char* indexpath) {
 
   /* Now, we get how many characters are stored in the buffer, */
   size_t size = (int) sizeof(buffer)/sizeof(char);
-  printf("%lu", size);
+  // printf("%lu", size);
 
-  /* As well as the amount of lines in the buffer, done by counting
-   * newline characters and adding one to that, */
 
   parse_index_file(buffer, size);
 
@@ -348,11 +337,6 @@ void list_passwords(char* indexpath) {
 }
 
 void rm_password(char* indexpath) {
-  if (sodium_init() < 0) {
-    /* The library couldn't be initialized, it is not safe to use */
-    puts("File encryption is not available. Aborting.");
-    exit(EXIT_FAILURE);
-  }
   FILE *indexfile = fopen(indexpath, "rw");
 
   /* Index file decryption */
@@ -369,11 +353,6 @@ void rm_password(char* indexpath) {
 }
 
 void get_password(char* indexpath) {
-  if (sodium_init() < 0) {
-    /* The library couldn't be initialized, it is not safe to use */
-    puts("File encryption is not available. Aborting.");
-    exit(EXIT_FAILURE);
-  }
   FILE *indexfile = fopen(indexpath, "r");
 
   /* Index file decryption */
@@ -394,6 +373,11 @@ void get_password(char* indexpath) {
 }
 
 int main(int argc, char *argv[]) {
+  if (sodium_init() < 0) {
+    /* The library couldn't be initialized, it is not safe to use */
+    puts("File encryption is not available. Aborting.");
+    exit(EXIT_FAILURE);
+  }
   char homepath[100];
   char dirpath[500];
   strncpy(homepath, getenv("HOME"), 100);
