@@ -4,8 +4,8 @@
 
 This is a simple password manager for Linux, inspired in part by [pass](https://www.passwordstore.org/).
 
-It is similar to pass in the sense that it aims to be simple, lightweight, as well as having readable code, allowing for ease of maintenance.
-However, citpass differs from it, by
+It is similar to pass in the sense that it aims to be simple, lightweight, as well as having readable code,
+allowing for ease of maintenance. However, citpass differs from it, by
 
 - Storing passwords somewhat differently. It does store each password in a separate file, along with
 metadata, but filenames are random, and an encrypted index file is used to point the user to the correct
@@ -59,20 +59,21 @@ and the cherry on top is that it requires systemd. Since I've already said Bash 
 can guess correctly what's my opinion on systemd, so let's not get into that.
 
 About the second point, I'm aware there's [tpm](https://github.com/nmeum/tpm/), as well as [spm](https://notabug.org/kl3/spm/),
-and a myriad other small/smaller password managers written in POSIX shell. Most of them, however, have the same "flawed" defaults, in the
-way I described in the first point.
+and a myriad other small/smaller password managers written in POSIX shell. Most of them, however, have
+the same "flawed" defaults, in the way I described in the first point. If, ultimately, I give up writing
+this utility, I may rewrite it in POSIX shell, making use of utilities like grep/ripgrep and gpg.
 
 My reasons to start writing my own password manager are feeble, I'll admit that much. I can just work
-around what I percieve to be wrong with these. But, I wanted to learn C through practice, by writing a useful
-program (to me), and I didn't want to write something that has been done before to death.
+around what I percieve to be wrong with these. But, I wanted to learn C through practice, by writing
+a useful program (to me), and I didn't want to write something that has been done before to death.
 
 # Building and installation
 
-The only run time dependency there is right now is the C standard library, currently developing this with glibc
-in mind. Other C standard libraries might work, but I haven't tested them out. I'll make sure this isn't specific
-to glibc, don't think that'll be hard.
+Run time dependencies are a C standard library and libsodium, currently developing this with glibc
+in mind. Other C standard libraries might work, but I haven't tested them out. I'll make sure this
+isn't specific to glibc, don't think that'll be hard.
 
-Compile time dependencies are GCC, Make, Linux header files and a C standard library.
+Compile time dependencies are GCC, Make, Linux header files, a C standard library, and libsodium.
 
 In your shell, change directory to the source directory, and run
 

@@ -28,8 +28,8 @@ void setting_dirpath(char* homepath, char* dirpath) {
 }
 
 /* Parsing possible commands for listing passwords */
-int parse_ls(char* list) {
-  int result = 1;
+unsigned short parse_ls(char* list) {
+  unsigned short result = 1;
   if (strncmp(list, "ls", 5) == 0 || strncmp(list, "list", 5) == 0 || strncmp(list, "show", 5) == 0) {
     result = 0;
   }
@@ -144,7 +144,6 @@ void initalization(char* dirpath, char* indexpath) {
     fputs("The folder at ", stdout);
     fputs(dirpath, stdout);
     fputs(" exists.\n", stdout);
-
     if (access(indexpath, F_OK) != -1) {
       /* And here, we check if the index file within exists as well, */
       fputs("The index file at ", stdout);
@@ -154,7 +153,6 @@ void initalization(char* dirpath, char* indexpath) {
     else {
       /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
       puts("The index file doesn't exist. Creating it.");
-
       FILE *indexcheck = fopen(indexpath, "w");
       fclose(indexcheck);
     }
@@ -397,7 +395,7 @@ int main(int argc, char *argv[]) {
   /* Now, it's necessary to parse the command passed to the program, so */
   int init = strncmp(argv[1], "init", 5);
   int add = strncmp(argv[1], "add", 5);
-  int ls = parse_ls(argv[1]);
+  unsigned short ls = parse_ls(argv[1]);
   int rm = strncmp(argv[1], "rm", 5);
   int get = strncmp(argv[1], "get", 5);
 
