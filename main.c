@@ -85,13 +85,12 @@ static char* rand_string(char* str, size_t size) {
 
 void parse_index_file(char* buffer, size_t size) {
   /* Let's first figure out how many lines we have in the file, by counting the amount of newline characters, */
-  unsigned int lines = 0;
-  for (int i = 0; i < size - 1; i++) {
+  unsigned short lines = 0;
+  for (unsigned short i = 0; i < size; i++) {
     if (buffer[i] == '\n') {
       lines++;
     }
   }
-  printf("%i\n", lines);
   /* Since we don't know how many passwords a user has stored in the folder,
    * it's necessary to dynamically allocate memory for the array that'll hold
    * the title strings. It's a 2D character array, so a 1D string array.
@@ -105,7 +104,7 @@ void parse_index_file(char* buffer, size_t size) {
     free(buffer);
     exit(EXIT_FAILURE);
   }
-  for (int i = 0; i < lines; i++) {
+  for (unsigned short i = 0; i < lines; i++) {
     titles[i] = malloc(TITLE_LEN*sizeof(char));
     /* Error handling */
     if (titles[i] == NULL) {
@@ -115,12 +114,12 @@ void parse_index_file(char* buffer, size_t size) {
       exit(EXIT_FAILURE);
     }
   }
-  int n = 0;
-  int p = 0;
+  unsigned short n = 0;
+  unsigned short p = 0;
   while (n < size - 1) {
     if (buffer[n] == ',') {
       n++;
-      int m = 0;
+      unsigned short m = 0;
       while (buffer[n] != '\n' && n < size - 1) {
         titles[p][m] = buffer[n];
         m++;
@@ -131,8 +130,9 @@ void parse_index_file(char* buffer, size_t size) {
     }
     n++;
   }
-  for (int i = 0; i < lines; i++) {
+  for (unsigned short i = 0; i < lines; i++) {
     fputs(titles[i], stdout);
+    fputs("\n", stdout);
   }
   free(titles);
 }
@@ -272,8 +272,7 @@ void list_passwords(char* indexpath) {
   }
 
   /* It's necessary to find out the size of the file. */
-
-  /* File descriptor being set, */
+  /* In order to do that, first we find out the file descriptor, */
   int fd = fileno(indexfile);
   /* Error handling */
   if (fd == -1) {
@@ -316,18 +315,18 @@ void list_passwords(char* indexpath) {
   /* And so we finally write the file to memory. getc reads one character at a time,
    * every time it is called it reads the next character */
   char c;
-  int n = 0;
+  unsigned short n = 0;
   while ((c = getc(indexfile)) != EOF) {
     buffer[n] = c;
     n++;
   }
-
   fclose(indexfile);
 
   /* Now, we get how many characters are stored in the buffer, */
-  size_t size = (int) sizeof(buffer)/sizeof(char);
-  // printf("%lu", size);
+  /* Need to actually get number of characters instead of just. */
 
+  //size_t size = (int) sizeof(buffer)/sizeof(char);
+  size_t size = filesize;
 
   parse_index_file(buffer, size);
 
