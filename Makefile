@@ -1,5 +1,5 @@
 COMPILER = cc
-CFLAGS = -std=c99
+CFLAGS = -std=c99 -Wall
 LDFLAGS = -lsodium
 default: citpass
 

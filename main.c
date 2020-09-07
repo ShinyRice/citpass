@@ -1,21 +1,29 @@
-#include <sodium.h> /* Encryption */
+/* C standard library, part of glibc */
 #include <stdio.h> /* fputs, fgets... */
 #include <stdlib.h> /* File I/O */
 #include <string.h> /* String manipulation */
+#include <time.h> /* Initializing seed for random generation */
+/* C POSIX library, part of glibc */
 #include <sys/stat.h> /* Creating folders */
 #include <sys/types.h>
 #include <termios.h> /* Telling the terminal to not show input */
-#include <time.h> /* Initializing seed for random generation */
 #include <unistd.h>
+/* Libsodium */
+#include <sodium.h> /* Encryption */
 
 #define RANDSTR_LEN 50
 #define TITLE_LEN 100
+
+/* Apparently, I need to declare fileno() explicitly in the source I wrote, instead of having that done
+ * in the header file. Otherwise I get a nice fat warning.
+ * https://stackoverflow.com/questions/46213840/get-rid-of-warning-implicit-declaration-of-function-fileno-in-flex */
+int fileno(FILE *stream);
 
 /* Functions */
 /* Setting the path to the directory where passwords are stored, done through an environment variable */
 void setting_dirpath(char* homepath, char* dirpath) {
   char* storelocation = getenv("CITPASS_DIR");
-  /* If storelocation is NULL, that is, it's a pointer pointing to nothing, in other words, the environment
+  /* If storelocation is NULL, it's a pointer pointing to nothing, in other words, the environment
    * variable hasn't been set and is just an empty string, we jump to the else case, since it's a boolean false.
    * If it's not empty we use it as the password folder location */
   if (storelocation) {
@@ -28,8 +36,8 @@ void setting_dirpath(char* homepath, char* dirpath) {
 }
 
 /* Parsing possible commands for listing passwords */
-unsigned short parse_ls(char* list) {
-  unsigned short result = 1;
+int parse_ls(char* list) {
+  unsigned int result = 1;
   if (strncmp(list, "ls", 5) == 0 || strncmp(list, "list", 5) == 0 || strncmp(list, "show", 5) == 0) {
     result = 0;
   }
@@ -83,58 +91,80 @@ static char* rand_string(char* str, size_t size) {
   return str;
 }
 
-void parse_index_file(char* buffer, size_t size) {
-  /* Let's first figure out how many lines we have in the file, by counting the amount of newline characters, */
-  unsigned short lines = 0;
-  for (unsigned short i = 0; i < size; i++) {
-    if (buffer[i] == '\n') {
-      lines++;
-    }
-  }
-  /* Since we don't know how many passwords a user has stored in the folder,
-   * it's necessary to dynamically allocate memory for the array that'll hold
-   * the title strings. It's a 2D character array, so a 1D string array.
-   * We already know how long titles can get, as defined in this constant.
-   * A pointer to a pointer is more or less a 2D array. */
-  char **titles = malloc(lines*sizeof(char));
+off_t get_filesize(FILE* indexfile) {
+  /* It's necessary to find out the size of the file. */
+  /* In order to do that, first we find out the file descriptor, */
+  int fd = fileno(indexfile);
   /* Error handling */
-  if (titles == NULL) {
-    puts("Failed to allocate needed memory for reading index file. Aborting.");
-    free(titles);
-    free(buffer);
+  if (fd == -1) {
+    fputs("Could not read index file. Aborting.", stdout);
+    fclose(indexfile);
     exit(EXIT_FAILURE);
   }
-  for (unsigned short i = 0; i < lines; i++) {
-    titles[i] = malloc(TITLE_LEN*sizeof(char));
-    /* Error handling */
-    if (titles[i] == NULL) {
-      puts("Failed to allocate needed memory for reading index file. Aborting.");
-      free(titles);
-      free(buffer);
-      exit(EXIT_FAILURE);
-    }
+
+  struct stat buf;
+  /* With fstat() we get file attributes and put them in buf. buf.st_size is
+   * the size of the file in bytes. */
+  fstat(fd, &buf);
+  off_t filesize = buf.st_size;
+
+  /* Error handling */
+  if ((fstat(fd, &buf) != 0) || (!S_ISREG(buf.st_mode))) {
+    fputs("Could not read index file. Aborting.", stdout);
+    fclose(indexfile);
+    exit(EXIT_FAILURE);
   }
-  unsigned short n = 0;
-  unsigned short p = 0;
-  while (n < size - 1) {
+
+  /* I'll set a large upper limit for the file, 1 MB. */
+  if (filesize > 1000000) {
+    fputs("Index file is larger than 1 MB. Aborting.", stdout);
+    fclose(indexfile);
+    exit(EXIT_FAILURE);
+  }
+  return filesize;
+}
+
+void parse_index_file(char** titles, unsigned int lines, char* buffer, size_t buffersize) {
+  unsigned int n = 0;
+  unsigned int p = 0;
+  /* Here's the meat of the parsing code.
+   * In this loop, we're just walking through each
+   * character of the 1D array that is the file buffer,
+   * until we reach the last element of the array */
+  while (n < buffersize) {
+    /* If we find a comma, that means we've reached
+     * a title. The title is identified by first stumbling
+     * upon a comma, and is terminated by a newline character */
     if (buffer[n] == ',') {
+      /* So we find a comma, we found ourselves a title.
+       * We advance by one char, and find the first char
+       * of the title, */
       n++;
-      unsigned short m = 0;
-      while (buffer[n] != '\n' && n < size - 1) {
+      /* And declare and define a variable which will be the
+       * index of the corresponding string where the title'll
+       * be stored */
+      unsigned int m = 0;
+      /* Now, we walk char by char through the buffer again,
+       * storing characters in the string at titles[p] until we find
+       * a newline char, and until the end of the file, */
+      while (buffer[n] != '\n' && n < buffersize) {
         titles[p][m] = buffer[n];
         m++;
         n++;
       }
+      /* Since this is done char by char, instead of
+       * treating everything with string manipulation
+       * functions, we need to add the termination character,
+       * at the end of the string, */
       titles[p][m++] = '\0';
-      p++;
+      /* And if we're not at the end of the buffer, we jump
+       * to the next title string */
+      if (n < buffersize) {
+        p++;
+      }
     }
     n++;
   }
-  for (unsigned short i = 0; i < lines; i++) {
-    fputs(titles[i], stdout);
-    fputs("\n", stdout);
-  }
-  free(titles);
 }
 
 /* Initializing store */
@@ -153,7 +183,7 @@ void initalization(char* dirpath, char* indexpath) {
     else {
       /* This is the case where the folder exists, but the file doesn't. The file is promptly created. */
       puts("The index file doesn't exist. Creating it.");
-      FILE *indexcheck = fopen(indexpath, "w");
+      FILE* indexcheck = fopen(indexpath, "w");
       fclose(indexcheck);
     }
   }
@@ -167,7 +197,7 @@ void initalization(char* dirpath, char* indexpath) {
     else {
       puts("Creating index file within folder as well.");
 
-      FILE *indexcheck = fopen(indexpath, "w");
+      FILE* indexcheck = fopen(indexpath, "w");
       fclose(indexcheck);
     }
   }
@@ -195,7 +225,7 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
       strncat(filepath, randstr, 500);
 
       /* File is opened, and subsequently the user fills the file with the password and relevant metadata */
-      FILE *fileadd = fopen(filepath, "a");
+      FILE* fileadd = fopen(filepath, "a");
       fputs("Title: ", stdout);
       fgets(title, 100, stdin);
       fputs("Title: ", fileadd);
@@ -238,7 +268,7 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
       fclose(fileadd);
 
       /* File's closed, and thus now we append the title of the entry and corresponding randomized filename to the end of the index file */
-      FILE *indexadd = fopen(indexpath, "a");
+      FILE* indexadd = fopen(indexpath, "a");
 
       strncpy(indexentry, randstr, 140);
       strncat(indexentry, ",", 140);
@@ -261,50 +291,22 @@ void add_password(char* dirpath, char* indexpath, char* filepath) {
 
 void list_passwords(char* indexpath) {
   /* Index file decryption */
-  FILE *indexfile = fopen(indexpath, "r");
+  FILE* indexfile = fopen(indexpath, "r");
   /* Error handling */
-  if (indexfile == NULL) {
+  if (!indexfile) {
     puts("Failed to open index file. Aborting.");
     fclose(indexfile);
     exit(EXIT_FAILURE);
   }
 
-  /* It's necessary to find out the size of the file. */
-  /* In order to do that, first we find out the file descriptor, */
-  int fd = fileno(indexfile);
-  /* Error handling */
-  if (fd == -1) {
-    fputs("Could not read index file. Aborting.", stdout);
-    fclose(indexfile);
-    exit(EXIT_FAILURE);
-  }
-
-  struct stat buf;
-  /* With fstat() we get file attributes and put them in buf. buf.st_size is
-   * the size of the file in bytes. */
-  fstat(fd, &buf);
-  off_t filesize = buf.st_size;
-
-  /* Error handling */
-  if ((fstat(fd, &buf) != 0) || (!S_ISREG(buf.st_mode))) {
-    fputs("Could not read index file. Aborting.", stdout);
-    fclose(indexfile);
-    exit(EXIT_FAILURE);
-  }
-
-  /* I'll set a large upper limit for the file, 1 MB. */
-  if (filesize > 1000000) {
-    fputs("Index file is larger than 1 MB. Aborting.", stdout);
-    fclose(indexfile);
-    exit(EXIT_FAILURE);
-  }
+  off_t filesize = get_filesize(indexfile);
 
   /* File's characters will be stored at this pointer, we're setting buffer up to point
    * at the allocated memory with the file we're going to read's filesize */
-  char* buffer = (char*)malloc(filesize);
+  char* buffer = malloc(filesize);
 
   /* Error handling */
-  if (buffer == NULL) {
+  if (!buffer) {
     fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
     fclose(indexfile);
     exit(EXIT_FAILURE);
@@ -313,7 +315,7 @@ void list_passwords(char* indexpath) {
   /* And so we finally write the file to memory. getc reads one character at a time,
    * every time it is called it reads the next character */
   char c;
-  unsigned short n = 0;
+  unsigned int n = 0;
   while ((c = getc(indexfile)) != EOF) {
     buffer[n] = c;
     n++;
@@ -323,18 +325,55 @@ void list_passwords(char* indexpath) {
   /* Now, we get how many characters are stored in the buffer, */
   /* Need to actually get number of characters instead of just. */
 
-  //size_t size = (int) sizeof(buffer)/sizeof(char);
-  size_t size = filesize;
+  size_t buffersize = filesize/sizeof(char);
 
-  parse_index_file(buffer, size);
+  /* Let's first figure out how many lines we have in the file, by counting the amount of newline characters, */
+  unsigned int lines = 0;
+  for (unsigned int i = 0; i < buffersize; i++) {
+    if (buffer[i] == '\n') {
+      lines++;
+    }
+  }
+  /* Since we don't know how many passwords a user has stored in the folder,
+   * it's necessary to dynamically allocate memory for the array that'll hold
+   * the title strings. It's a 2D character array, so a 1D string array.
+   * We already know how long titles can get, as defined in this constant. */
+  char** titles = malloc(lines*sizeof(char));
+  /* Error handling */
+  /* 0 is treated as a boolean false. Here, the ! indicates a reversal of that; if titles is null,
+   * that is, 0, it's now treated as a boolean true, therefore since we couldn't allocate memory,
+   * we error out */
+  if (!titles) {
+    puts("Failed to allocate needed memory for reading index file. Aborting.");
+    free(titles);
+    free(buffer);
+    exit(EXIT_FAILURE);
+  }
+  for (unsigned int i = 0; i < lines; i++) {
+    titles[i] = malloc(TITLE_LEN*sizeof(char));
+    /* Error handling */
+    if (!titles[i]) {
+      puts("Failed to allocate needed memory for reading index file. Aborting.");
+      free(titles);
+      free(buffer);
+      exit(EXIT_FAILURE);
+    }
+  }
 
+  parse_index_file(titles, lines, buffer, buffersize);
   free(buffer);
+
+  for (unsigned int i = 0; i < lines; i++) {
+    fputs(titles[i], stdout);
+    fputs("\n", stdout);
+  }
+  free(titles);
 
   /* Index file encryption */
 }
 
 void rm_password(char* indexpath) {
-  FILE *indexfile = fopen(indexpath, "rw");
+  FILE* indexfile = fopen(indexpath, "rw");
 
   /* Index file decryption */
 
@@ -350,7 +389,7 @@ void rm_password(char* indexpath) {
 }
 
 void get_password(char* indexpath) {
-  FILE *indexfile = fopen(indexpath, "r");
+  FILE* indexfile = fopen(indexpath, "r");
 
   /* Index file decryption */
 
@@ -395,7 +434,7 @@ int main(int argc, char *argv[]) {
   /* Now, it's necessary to parse the command passed to the program, so */
   int init = strncmp(argv[1], "init", 5);
   int add = strncmp(argv[1], "add", 5);
-  unsigned short ls = parse_ls(argv[1]);
+  int ls = parse_ls(argv[1]);
   int rm = strncmp(argv[1], "rm", 5);
   int get = strncmp(argv[1], "get", 5);
 

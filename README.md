@@ -61,7 +61,7 @@ can guess correctly what's my opinion on systemd, so let's not get into that.
 About the second point, I'm aware there's [tpm](https://github.com/nmeum/tpm/), as well as [spm](https://notabug.org/kl3/spm/),
 and a myriad other small/smaller password managers written in POSIX shell. Most of them, however, have
 the same "flawed" defaults, in the way I described in the first point. If, ultimately, I give up writing
-this utility, I may rewrite it in POSIX shell, making use of utilities like grep/ripgrep and gpg.
+this utility, I may rewrite it in POSIX shell, making use of programs like grep/ripgrep and gpg.
 
 My reasons to start writing my own password manager are feeble, I'll admit that much. I can just work
 around what I percieve to be wrong with these. But, I wanted to learn C through practice, by writing
@@ -69,11 +69,10 @@ a useful program (to me), and I didn't want to write something that has been don
 
 # Building and installation
 
-Run time dependencies are a C standard library and libsodium, currently developing this with glibc
-in mind. Other C standard libraries might work, but I haven't tested them out. I'll make sure this
-isn't specific to glibc, don't think that'll be hard.
+Run time dependencies are glibc and libsodium. I'll make sure this program doesn't specifically depend
+on glibc, don't think that'll be hard.
 
-Compile time dependencies are GCC, Make, Linux header files, a C standard library, and libsodium.
+Compile time dependencies are GCC, Make, glibc, and libsodium.
 
 In your shell, change directory to the source directory, and run
 
