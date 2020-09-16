@@ -1,6 +1,6 @@
 # citpass - "See it pass"
 
-**There's some code written, but I haven't gotten to file encryption yet. I'm not sure how long it will take me to get this to a usable state. Don't depend on this for now.**
+**I'm not sure how long it will take me to get this to a usable state. Don't depend on this for now.**
 
 This is a simple password manager for Linux, inspired in part by [pass](https://www.passwordstore.org/).
 
@@ -19,8 +19,8 @@ password. This idea has been shamelessly stolen from [pwd.sh](https://github.com
 
 For now, I've only thought of making it do five things,
 
-- Creating the directory where passwords are stored and corresponding index file, which defaults to ~/.local/share/citpass,
-but the directory path can be set through the environment variable CITPASS_DIR
+- Creating the directory where passwords are stored and corresponding index file, which defaults to
+$HOME/.local/share/citpass, but the directory path can be set through the environment variable CITPASS_DIR
 
 - Adding passwords to the directory. Each password will have metadata associated to it stored in the file too,
 with a format taken after KeePass, storing title, username, password, URL and notes about the service
@@ -94,4 +94,5 @@ $ make clean
 
 # License
 
-All of the code I've written myself is licensed under GPL v3 as shown above. This program uses libsodium, which is licensed under the [ISC license](https://en.wikipedia.org/wiki/ISC_license).
+All of the code I've written myself is licensed under GPL v3 as shown above. This program uses libsodium,
+which is licensed under the [ISC license](https://en.wikipedia.org/wiki/ISC_license).
