@@ -18,7 +18,6 @@
 #define RANDSTR_LEN 50
 #define TITLE_LEN 100
 #define PASS_LEN 200
-#define PAD_BYTES 40
 
 /* In order to avoid getting a nice fat warning, a quick workaround is to declare fileno() explicitly in the source
  * I wrote, instead of having that done in the corresponding header file...
@@ -29,30 +28,30 @@ int fileno(FILE *stream);
 void show_command_information(const int sit) {
   switch (sit) {
     case 0:
-      puts("citpass requires a command. Possible commands are:");
-      puts("init - Create the folder where passwords will be stored, located at $HOME/.local/share/citpass");
-      puts("add - Add a password along with associated information to said file");
-      puts("ls - List all entries for which there is a password");
-      puts("rm - Remove a password along with associated information from the file");
-      puts("get - Retrieve a password");
+      fputs("citpass requires a command. Possible commands are:\n", stdout);
+      fputs("init - Create the folder where passwords and index will be stored, located at $HOME/.local/share/citpass\n", stdout);
+      fputs("add - Create a password entry\n", stdout);
+      fputs("ls - List all password entries\n", stdout);
+      fputs("rm - Remove a password entry\n", stdout);
+      fputs("get - Retrieve a password\n", stdout);
       break;
     case 1:
-      puts("Invalid command, please provide a valid one.");
-      puts("Possible commands are:");
-      puts("init - Create the folder where passwords will be stored, located at $HOME/.local/share/citpass");
-      puts("add - Add a password along with associated information to said file");
-      puts("ls - List all entries for which there is a password");
-      puts("rm - Remove a password along with associated information from the file");
-      puts("get - Retrieve a password");
+      fputs("Invalid command, please provide a valid one.\n", stdout);
+      fputs("Possible commands are:\n", stdout);
+      fputs("init - Create the folder where passwords and index will be stored, located at $HOME/.local/share/citpass\n", stdout);
+      fputs("add - Create a password entry\n", stdout);
+      fputs("ls - List all password entries\n", stdout);
+      fputs("rm - Remove a password entry\n", stdout);
+      fputs("get - Retrieve a password\n", stdout);
       break;
     case 2:
-      puts("This command does not need arguments.");
+      fputs("This command does not need arguments.\n", stdout);
       break;
     case 3:
-      puts("This command requires the title of an entry in order to proceed.");
+      fputs("This command requires the title of an entry in order to proceed.\n", stdout);
       break;
     case 4:
-      puts("Too many arguments have been passed.");
+      fputs("Too many arguments have been passed.\n", stdout);
   }
 }
 
@@ -69,18 +68,6 @@ void setting_dir_path(const char* home_path, char* dir_path) {
     strncpy(dir_path, home_path, 200);
     strncat(dir_path, "/.local/share/citpass", 200);
   }
-}
-
-/* Parsing possible commands for listing passwords */
-unsigned int parse_ls(const char* list) {
-  unsigned int result = 1;
-  if ((strncmp(list, "ls", 5) == 0) || (strncmp(list, "list", 5) == 0) || (strncmp(list, "show", 5) == 0)) {
-    result = 0;
-  }
-  else {
-    result = 1;
-  }
-  return result;
 }
 
 /* Fetching password from stdin, not letting it show up on the terminal */
@@ -115,9 +102,10 @@ static char* rand_junk_str(char* str, size_t size) {
 }
 
 /* fp == file pointer */
-off_t get_file_size(FILE* fp) {
+off_t get_file_size(const char* path) {
   /* It's necessary to find out the size of the file.
   * In order to do that, first we find out the file descriptor, fd, */
+  FILE* fp = fopen(path, "r");
   int fd = fileno(fp);
   /* Error handling */
   if (fd == -1) {
@@ -142,6 +130,7 @@ off_t get_file_size(FILE* fp) {
     fclose(fp);
     exit(EXIT_FAILURE);
   }
+  fclose(fp);
   return file_size;
 }
 
@@ -150,8 +139,7 @@ size_t read_index_file(FILE* index_fp, char* buffer) {
    * every time it is called it reads the next character */
   char c;
   unsigned int n = 0;
-  /* Worth noting, at least for myself, that the condition in this loop means the buffered index file
-   * won't have an EOF character, so no need to deal with it. */
+
   while ((c = getc(index_fp)) != EOF) {
     buffer[n] = c;
     n++;
@@ -162,12 +150,13 @@ size_t read_index_file(FILE* index_fp, char* buffer) {
 
 /* The way this function parses the index file puts the entire second column of the CSV index file
  * into titles[], which means that "Titles" will invariably be the first string in that array.
- * We won't ignore that when parsing, but we do ignore it when printing titles[], simply by starting
+ * We won't ignore that when parsing, but we will ignore it when printing titles[], simply by starting
  * from titles[1] and not titles[0] */
 void parse_index_file(char** titles, const unsigned int lines, const char* buffer, const size_t buf_len) {
   unsigned int n = 0;
   unsigned int p = 0;
   unsigned int m;
+
   /* In this loop, we're just walking through each character of the 1D array that is the file buffer,
    * until we reach the last element of the array */
   while (n < buf_len) {
@@ -197,77 +186,33 @@ void parse_index_file(char** titles, const unsigned int lines, const char* buffe
   }
 }
 
-/* Take the first line of the index, "Filename,Title", and encrypt that, then put it in the index file.
- * This function's specifically for encrypting the index file for the first time */
-static int init_encrypt_index_file(const char* dest_file, const unsigned char key[crypto_secretstream_xchacha20poly1305_KEYBYTES]) {
-  unsigned char header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
-  unsigned char buf_out[15 + crypto_secretstream_xchacha20poly1305_ABYTES];
-  crypto_secretstream_xchacha20poly1305_state st;
-  unsigned long long out_len;
-  const unsigned char first_line[] = "Filename,Title";
-  size_t line_len = strlen((char*)first_line);
-
-  crypto_secretstream_xchacha20poly1305_init_push(&st, header, key);
-  crypto_secretstream_xchacha20poly1305_push(&st, buf_out, &out_len, first_line, line_len, NULL, 0, crypto_secretstream_xchacha20poly1305_TAG_FINAL);
-  FILE* dest_fp = fopen(dest_file, "wb");
-  if (! dest_fp) {
-    puts("Failed to create index file. Aborting.");
-    exit(EXIT_FAILURE);
-  }
-  fwrite(header, 1, sizeof(header), dest_fp);
-  fwrite(buf_out, 1, out_len, dest_fp);
-  fclose(dest_fp);
-  return 0;
-}
-
-void init_create_index_file(const char* index_path) {
-  puts("Creating index file within folder.");
-  char mast_pass[PASS_LEN];
-  fputs("Master password: ", stdout);
-  password_input(mast_pass);
-
-  unsigned char salt[crypto_pwhash_SALTBYTES];
-  unsigned char key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
-
-  randombytes_buf(salt, sizeof(salt));
-  fputs("\n", stdout);
-  if (crypto_pwhash(key, sizeof(key), mast_pass, strlen(mast_pass), salt, crypto_pwhash_OPSLIMIT_MODERATE, crypto_pwhash_MEMLIMIT_MODERATE, crypto_pwhash_ALG_DEFAULT) != 0) {
-    puts("Ran out of memory while deriving key from master password. Aborting.");
-    exit(EXIT_FAILURE);
-  }
-  if (init_encrypt_index_file(index_path, key) != 0) {
-    puts("Failed to encrypt index file. Aborting.");
-    exit(EXIT_FAILURE);
-  }
-}
-
-static int encrypt(const char* dest_file_path, const unsigned char* message, const size_t message_len) {
+static int encrypt(const char* dest_file_path, const char* message, const size_t message_len) {
   unsigned char ciphertext[message_len + crypto_secretbox_MACBYTES];
   char mast_pass[PASS_LEN];
   fputs("Master password: ", stdout);
   password_input(mast_pass);
+  fputs("\n", stdout);
   unsigned char salt[crypto_pwhash_SALTBYTES];
   unsigned char key[crypto_secretbox_KEYBYTES];
 
   randombytes_buf(salt, sizeof(salt));
-  fputs("\n", stdout);
   if (crypto_pwhash(key, sizeof(key), mast_pass, strlen(mast_pass), salt, crypto_pwhash_OPSLIMIT_MODERATE, crypto_pwhash_MEMLIMIT_MODERATE, crypto_pwhash_ALG_DEFAULT) != 0) {
-    puts("Ran out of memory while deriving key from master password. Aborting.");
+    fputs("Ran out of memory while deriving key from master password. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
   }
+  crypto_secretbox_easy(ciphertext, (unsigned char*)message, message_len, salt, key);
 
-  crypto_secretbox_easy(ciphertext, message, message_len, salt, key);
   FILE* dest_fp = fopen(dest_file_path, "wb");
   if (! dest_fp) {
-    puts("Failed to open file. Aborting.");
+    fputs("Failed to open file. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
   }
-  fwrite(ciphertext, 1, (size_t) message_len + crypto_secretbox_MACBYTES, dest_fp);
+  fwrite(ciphertext, 1, message_len + crypto_secretbox_MACBYTES, dest_fp);
   fclose(dest_fp);
   return 0;
 }
 
-static int decrypt(const char* src_file_path) {
+static int decrypt(const char* src_file_path, const char* message, const size_t message_len) {
   char mast_pass[PASS_LEN];
   fputs("Master password: ", stdout);
   password_input(mast_pass);
@@ -278,32 +223,28 @@ static int decrypt(const char* src_file_path) {
   randombytes_buf(salt, sizeof(salt));
   fputs("\n", stdout);
   if (crypto_pwhash(key, sizeof(key), mast_pass, strlen(mast_pass), salt, crypto_pwhash_OPSLIMIT_MODERATE, crypto_pwhash_MEMLIMIT_MODERATE, crypto_pwhash_ALG_DEFAULT) != 0) {
-    puts("Ran out of memory while deriving key from master password. Aborting.");
+    fputs("Ran out of memory while deriving key from master password. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
   }
   FILE* dest_fp = fopen(src_file_path, "rb");
   if (! dest_fp) {
-    puts("Failed to open file. Aborting.");
+    fputs("Failed to open file. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
   }
   /* It's necessary to know how much memory to allocate to get the file onto memory.
    * In order to do that, we need the file size; but most crypto algos usually add
    * a fixed number of bytes to the file. I'm going to take advantage of this fact. */
-  size_t message_len = get_file_size(dest_fp) - crypto_secretbox_MACBYTES;
-  unsigned char* message = calloc(message_len, sizeof(char));
   unsigned char ciphertext[message_len + crypto_secretbox_MACBYTES];
   fread(ciphertext, sizeof(char), message_len + crypto_secretbox_MACBYTES, dest_fp);
-  if (crypto_secretbox_open_easy(message, ciphertext, message_len + crypto_secretbox_MACBYTES, salt, key) != 0) {
-    puts("File contents have been forged or corrupted. Aborting.");
+  if (crypto_secretbox_open_easy((unsigned char*)message, ciphertext, message_len + crypto_secretbox_MACBYTES, salt, key) != 0) {
+    fputs("File contents have been forged or corrupted. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
   }
   fclose(dest_fp);
   return 0;
 }
 
-/* Checking whether or not password directory exists. If it doesn't, it's created, then the index file is created
- * within and encrypted. If it does, we check for the existence of the index file, and if it doesn't exist,
- * we create it and encrypt it. */
+
 void initialize() {
   char home_path[100];
   strncpy(home_path, getenv("HOME"), 100);
@@ -324,7 +265,11 @@ void initialize() {
       fputs(" exists as well. No action necessary.\n", stdout);
     }
     else {
-      init_create_index_file(index_path);
+      fputs("Creating index file within folder.\n", stdout);
+      if (encrypt(index_path, "Filename,Title", strlen("Filename,Title")) != 0) {
+        fputs("Failed to encrypt index file. Aborting.\n", stdout);
+        exit(EXIT_FAILURE);
+      }
     }
   }
   else {
@@ -332,11 +277,15 @@ void initialize() {
     fputs(dir_path, stdout);
     fputs(" doesn't exist. Creating it.\n", stdout);
     if (mkdir(dir_path, 0700) == -1) {
-      puts("Creating folder failed. Aborting.");
+      fputs("Creating folder failed. Aborting.\n", stdout);
       exit(EXIT_FAILURE);
     }
     else {
-      init_create_index_file(index_path);
+      fputs("Creating index file within folder.\n", stdout);
+      if (encrypt(index_path, "Filename,Title", strlen("Filename,Title")) != 0) {
+        fputs("Failed to encrypt index file. Aborting.\n", stdout);
+        exit(EXIT_FAILURE);
+      }
     }
   }
 }
@@ -357,77 +306,75 @@ void add_password() {
   strncpy(file_path, dir_path, 280);
   strcat(file_path, "/");
 
-  char rand_str[RANDSTR_LEN];
-  char index_entry[RANDSTR_LEN + TITLE_LEN];
-
-  char title[TITLE_LEN];
-  char password[PASS_LEN];
-  char username[100];
-  char url[200];
-  char notes[1000];
-
   /* Here, we check if the folder where passwords are stored exists, */
   if (access(dir_path, F_OK) != -1) {
    /* And here, we check if the index file within exists too. In this case, since they both exist, we do the deed. */
     if (access(index_path, F_OK) != -1) {
+      char rand_str[RANDSTR_LEN];
+      char index_entry[RANDSTR_LEN + TITLE_LEN];
+
+      char title[TITLE_LEN];
+      char password[PASS_LEN];
+      char username[100];
+      char url[200];
+      char notes[1000];
       /* We initialize the seed for generating random strings. Now, this might be a shitty way to get a seed, but all
        * I want is some junk to put as a filename, it's not a mission critical task */
       srand(time(0));
       /* then generate such a random junk string, */
-      rand_junk_str(rand_str, 50);
+      rand_junk_str(rand_str, RANDSTR_LEN);
       /* and append it to the folder path, */
       strncat(file_path, rand_str, 290);
 
-      /* File is opened, and subsequently the user fills the file with the password and relevant metadata */
-      FILE* entry_fp = fopen(file_path, "a");
-      if (! entry_fp) {
-        puts("Failed to create password entry file. Aborting.");
-        exit(EXIT_FAILURE);
-      }
-
       fputs("Title: ", stdout);
       fgets(title, 100, stdin);
-      fputs("Title: ", entry_fp);
-      fputs(title, entry_fp);
 
       fputs("Password: ", stdout);
       password_input(password);
-      fputs("Password: ", entry_fp);
-      fputs(password, entry_fp);
       fputs("\n", stdout);
 
       fputs("Username: ", stdout);
       fgets(username, 100, stdin);
-      fputs("Username: ", entry_fp);
-      fputs(username, entry_fp);
 
       fputs("URL: ", stdout);
       fgets(url, 200, stdin);
-      fputs("URL: ", entry_fp);
-      fputs(url, entry_fp);
 
       fputs("Notes: ", stdout);
       fgets(notes, 1000, stdin);
-      fputs("Notes: ", entry_fp);
-      fputs(notes, entry_fp);
 
-      fclose(entry_fp);
+      /* strlen() excludes the null byte, but strcat() includes it, so when allocating the entire
+       * entry on the stack, we need to take that into account. We need 5 extra elements for the
+       * null bytes at the end, and 4 new line characters. */
+      unsigned int entry_len = strlen(title) + strlen(password) + strlen(username) + strlen(url) + strlen(notes) + 9;
+      char entry[entry_len];
+      strcpy(entry, title);
+      strcat(entry, "\n");
+      strcat(entry, password);
+      strcat(entry, "\n");
+      strcat(entry, username);
+      strcat(entry, "\n");
+      strcat(entry, url);
+      strcat(entry, "\n");
+      strcat(entry, notes);
 
-      /* File's closed, and thus now we append the title of the entry and corresponding randomized
-       * filename to the end of the index file */
-      FILE* index_fp = fopen(index_path, "a");
-      if (! index_fp) {
-        puts("Failed to open index file. Aborting.");
+      if (encrypt(file_path, entry, entry_len) != 0) {
+        fputs("Unable to encrypt password file. Aborting.\n", stdout);
         exit(EXIT_FAILURE);
       }
-      strncpy(index_entry, rand_str, 140);
-      strncat(index_entry, ",", 140);
-      strncat(index_entry, title, 140);
-      fputs(index_entry, index_fp);
-      fclose(index_fp);
+
+      /* Now, we append the title of the entry and corresponding randomized filename to the end of the index file */
+      size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
+      char* index_buf = calloc(index_len, sizeof(char));
+      if (decrypt(index_path, index_buf, index_len) != 0) {
+        fputs("Unable to decrypt index file. Aborting.\n", stdout);
+        exit(EXIT_FAILURE);
+      }
+      strcpy(index_entry, rand_str);
+      strcat(index_entry, ",");
+      strcat(index_entry, title);
    }
    else {
-     puts("The index file doesn't exist. Please run \"citpass init\" to create it.");
+     fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
    }
  }
  else {
@@ -450,31 +397,25 @@ void list_passwords() {
   if (access(dir_path, F_OK) != -1) {
     /* And here, we check if the index file within exists too. In this case, since they both exist, we do the deed. */
     if (access(index_path, F_OK) != -1) {
-      /* Index file decryption */
-      FILE* index_fp = fopen(index_path, "r");
-      /* Error handling */
-      if (! index_fp) {
-        puts("Failed to open index file. Aborting.");
-        fclose(index_fp);
-        exit(EXIT_FAILURE);
-      }
       /* We get the file size first, */
-      off_t file_size = get_file_size(index_fp);
+      size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
       /* File's characters will be stored at this pointer below, we're setting buffer up to point
        * at the allocated memory with the index file's filesize */
-      char* buffer = calloc(file_size/sizeof(char), sizeof(char));
+      char* index_buf = calloc(index_len, sizeof(char));
       /* Error handling */
-      if (! buffer) {
+      if (! index_buf) {
         fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
-        fclose(index_fp);
         exit(EXIT_FAILURE);
       }
-      size_t buf_len = read_index_file(index_fp, buffer);
-      fclose(index_fp);
-      /* Let's first figure out how many lines we have in the file, by counting the amount of newline characters, */
+      /* Index file decryption */
+      if (decrypt(index_path, index_buf, index_len) != 0) {
+        fputs("Unable to decrypt index file. Aborting.\n", stdout);
+        exit(EXIT_FAILURE);
+      }
+      /* Let's first figure out how many lines we have in the index file, by counting the amount of newline characters, */
       unsigned int lines = 0;
-      for (unsigned int n = 0; n < buf_len; n++) {
-        if (buffer[n] == '\n') {
+      for (unsigned int n = 0; n < index_len; n++) {
+        if (index_buf[n] == '\n') {
           lines++;
         }
       }
@@ -488,16 +429,16 @@ void list_passwords() {
        * as in, 0, it's now treated as a boolean true, which means that we couldn't allocate memory,
        * so we error out */
       if (! titles) {
-        puts("Failed to allocate needed memory for reading index file. Aborting.");
+        fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
         free(titles);
-        free(buffer);
+        free(index_buf);
         exit(EXIT_FAILURE);
       }
       for (unsigned int n = 0; n < lines; n++) {
         titles[n] = calloc(TITLE_LEN, sizeof(char));
         /* Error handling */
         if (! titles[n]) {
-          puts("Failed to allocate needed memory for reading index file. Aborting.");
+          fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
           unsigned int m = n - 1;
           while (m >= 0) {
             free(titles[m]);
@@ -505,22 +446,21 @@ void list_passwords() {
           }
           /* Freeing memory twice is undefined behaviour... */
           free(titles);
-          free(buffer);
+          free(index_buf);
           exit(EXIT_FAILURE);
         }
       }
-      parse_index_file(titles, lines, buffer, buf_len);
-      free(buffer);
+      parse_index_file(titles, lines, index_buf, index_len);
+      free(index_buf);
       /* Finally, we print out the list of titles */
-      for (unsigned int n = 1; n < lines; n++) {
+      for (unsigned int n = 0; n < lines; n++) {
         fputs(titles[n], stdout);
         fputs("\n", stdout);
       }
       free(titles);
-      /* Index file encryption */
     }
     else {
-      puts("The index file doesn't exist. Please run \"citpass init\" to create it.");
+      fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
     }
   }
   else {
@@ -541,67 +481,47 @@ void rm_password() {
   strncat(index_path, "/index", 280);
 
   char file_path[300];
-  /* The full path of the file to be decrypted and opened isn't completely specified, that will be done
-   * according to user input */
+  /* The full path of the file to be decrypted and opened isn't completely specified, that will be done according to user input */
   strncpy(file_path, dir_path, 280);
   strcat(file_path, "/");
+
   /* Here, we check if the folder where passwords are stored exists, */
   if (access(dir_path, F_OK) != -1) {
     /* And here, we check if the index file within exists too. */
     if (access(index_path, F_OK) != -1) {
+      /* We get the file size first, */
+      size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
+      /* Then we allocate memory for the unencrypted contents, */
+      char* index_buf = calloc(index_len, sizeof(char));
+      if (! index_buf) {
+        fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
+        exit(EXIT_FAILURE);
+      }
       /* Index file decryption */
-      if (decrypt(index_path) != 0) {
+      if (decrypt(index_path, index_buf, index_len) != 0) {
         fputs("Unable to decrypt index file. Aborting.\n", stdout);
         exit(EXIT_FAILURE);
       }
-      FILE* index_fp = fopen(index_path, "r");
-      /* Error handling */
-      if (! index_fp) {
-        puts("Failed to open index file. Aborting.");
-        fclose(index_fp);
-        exit(EXIT_FAILURE);
-      }
-      /* We get the file size first, */
-      off_t file_size = get_file_size(index_fp);
-      /* File's characters will be stored at this pointer below, we're setting buffer up to point
-       * at the allocated memory with the index file's filesize */
-      char* buffer = calloc(file_size/sizeof(char), sizeof(char));
-      /* Error handling */
-      if (! buffer) {
-        fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
-        fclose(index_fp);
-        exit(EXIT_FAILURE);
-      }
-      size_t buf_len = read_index_file(index_fp, buffer);
-      fclose(index_fp);
-
       /* Let's first figure out how many lines we have in the file, by counting the amount of newline characters, */
       unsigned int lines = 0;
-      for (unsigned int n = 0; n < buf_len; n++) {
-        if (buffer[n] == '\n') {
+      for (unsigned int n = 0; n < index_len; n++) {
+        if (index_buf[n] == '\n') {
           lines++;
         }
       }
-      /* Since we don't know how many passwords a user has stored in the folder,
-       * it's necessary to dynamically allocate memory for the array that'll hold
-       * the title strings. It's a 2D character array, so a 1D string array.
-       * First, we allocate the first "column" */
       char** titles = calloc(lines, sizeof(char));
       /* Error handling */
-      /* 0 is treated as a boolean false. Here, the ! indicates a reversal of that; if titles is null,
-       * as in, 0, it's now treated as a boolean true, which means that we couldn't allocate memory,
-       * so we error out */
       if (! titles) {
-        puts("Failed to allocate needed memory for reading index file. Aborting.");
+        fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
         free(titles);
-        free(buffer);
+        free(index_buf);
         exit(EXIT_FAILURE);
       }
       for (unsigned int n = 0; n < lines; n++) {
         titles[n] = calloc(TITLE_LEN, sizeof(char));
         /* Error handling */
         if (! titles[n]) {
-          puts("Failed to allocate needed memory for reading index file. Aborting.");
+          fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
           unsigned int m = n - 1;
           while (m >= 0) {
             free(titles[m]);
@@ -609,27 +529,26 @@ void rm_password() {
           }
           /* Freeing memory twice is undefined behaviour... */
           free(titles);
-          free(buffer);
+          free(index_buf);
           exit(EXIT_FAILURE);
         }
       }
-      parse_index_file(titles, lines, buffer, buf_len);
-      free(buffer);
-      /* Finally, we print out the list of titles */
+      parse_index_file(titles, lines, index_buf, index_len);
+      free(index_buf);
+      /* Title printing to stdout */
       for (unsigned int n = 1; n < lines; n++) {
         fputs(titles[n], stdout);
         fputs("\n", stdout);
       }
       free(titles);
-      /* Index file encryption */
-      /* Print out list of entries */
       /* User selects entry */
+      /* Index file decryption */
       /* Entry is deleted from index file */
       /* Index file encryption */
       /* Selected password file is deleted */
    }
     else {
-      puts("The index file doesn't exist. Please run \"citpass init\" to create it.");
+      fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
     }
   }
   else {
@@ -650,8 +569,7 @@ void get_password() {
   strncat(index_path, "/index", 280);
 
   char file_path[300];
-  /* The full path of the file to be decrypted and opened isn't completely specified, that will be done
-   * according to user input */
+  /* The full path of the file to be decrypted and opened isn't completely specified, that will be done later */
   strncpy(file_path, dir_path, 280);
   strcat(file_path, "/");
 
@@ -659,39 +577,73 @@ void get_password() {
   if (access(dir_path, F_OK) != -1) {
    /* And here, we check if the index file within exists too. */
     if (access(index_path, F_OK) != -1) {
-      /* Master password put in by user */
-      /* Key generated from master password */
-      /* Index file decryption */
-      FILE* index_fp = fopen(index_path, "r");
-      /* Error handling */
-      if (! index_fp) {
-        puts("Failed to open index file. Aborting.");
-        fclose(index_fp);
-        exit(EXIT_FAILURE);
-      }
-      /* We get the file size first, */
-      off_t file_size = get_file_size(index_fp);
-      /* File's characters will be stored at this pointer below, we're setting buffer up to point
+      /* We get the file size first, which needs to be subtracted by the fixed number of extra bytes, in order to get
+       * the actual size of the unencrypted contents */
+      size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
+      /* File's characters will be stored at this pointer below, we're setting index_buf up to point
        * at the allocated memory with the index file's size */
-      char* buffer = calloc(file_size/sizeof(char), sizeof(char));
+      char* index_buf = calloc(index_len, sizeof(char));
       /* Error handling */
-      if (! buffer) {
+      if (! index_buf) {
         fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
-        fclose(index_fp);
         exit(EXIT_FAILURE);
       }
-      size_t buf_len = read_index_file(index_fp, buffer);
-      free(buffer);
-      fclose(index_fp);
-      /* Print out list of entries */
-      /* Index file encryption */
+      /* Index file decryption */
+      if (decrypt(index_path, index_buf, index_len) != 0) {
+        fputs("Unable to decrypt index file. Aborting.\n", stdout);
+        exit(EXIT_FAILURE);
+      }
+      unsigned int lines = 0;
+      for (unsigned int n = 0; n < index_len; n++) {
+        if (index_buf[n] == '\n') {
+          lines++;
+        }
+      }
+      char** titles = calloc(lines, sizeof(char));
+      if (! titles) {
+        fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+        free(titles);
+        free(index_buf);
+        exit(EXIT_FAILURE);
+      }
+      for (unsigned int n = 0; n < lines; n++) {
+        titles[n] = calloc(TITLE_LEN, sizeof(char));
+        if (! titles[n]) {
+          fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+          unsigned int m = n - 1;
+          while (m >= 0) {
+            free(titles[m]);
+            m--;
+          }
+          /* Freeing memory twice is undefined behaviour... */
+          free(titles);
+          free(index_buf);
+          exit(EXIT_FAILURE);
+        }
+      }
+      parse_index_file(titles, lines, index_buf, index_len);
+      free(index_buf);
+      /* Print out the list of titles */
+      for (unsigned int n = 0; n < lines; n++) {
+        fputs(titles[n], stdout);
+        fputs("\n", stdout);
+      }
+      free(titles);
       /* User selects entry */
       /* Password file decryption */
+      size_t file_len = ((size_t)get_file_size(file_path) - crypto_secretbox_MACBYTES)/sizeof(char);
+      char* file_buf = calloc(file_len, sizeof(char));
+      if (decrypt(file_path, file_buf, file_len) != 0) {
+        fputs("Unable to decrypt password file. Aborting.\n", stdout);
+        free(file_buf);
+        exit(EXIT_FAILURE);
+      }
       /* Password is printed to stdout/piped to clipboard manager */
+      free(file_buf);
       /* Password file encryption */
     }
    else {
-     puts("The index file doesn't exist. Please run \"citpass init\" to create it.");
+     fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
    }
  }
  else {
@@ -703,8 +655,8 @@ void get_password() {
 
 int main(int argc, char *argv[]) {
   if (sodium_init() < 0) {
-    /* The library couldn't be initialized, it is not safe to use */
-    puts("File encryption is not available. Aborting.");
+    /* Library couldn't be initialized, it is not safe to use */
+    fputs("File encryption is not available. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
   }
   /* Now, it's necessary to parse the command passed to the program, so */
@@ -718,7 +670,7 @@ int main(int argc, char *argv[]) {
   }
   int init = strncmp(argv[1], "init", 5);
   int add = strncmp(argv[1], "add", 5);
-  int ls = parse_ls(argv[1]);
+  int ls = ((strncmp(argv[1], "ls", 5) == 0) || (strncmp(argv[1], "list", 5) == 0) || (strncmp(argv[1], "show", 5) == 0)) ? 0 : 1;
   int rm = strncmp(argv[1], "rm", 5);
   int get = strncmp(argv[1], "get", 5);
   /* First, it's necessary to know how many commands have been passed */
@@ -735,10 +687,10 @@ int main(int argc, char *argv[]) {
       list_passwords();
     }
     else if (rm == 0) {
-      show_command_information(3);
+      rm_password();
     }
     else if (get == 0) {
-      show_command_information(3);
+      get_password();
     }
     else {
       show_command_information(1);
@@ -756,10 +708,10 @@ int main(int argc, char *argv[]) {
       show_command_information(2);
     }
     else if (rm == 0) {
-      rm_password();
+      show_command_information(2);
     }
     else if (get == 0) {
-      get_password();
+      show_command_information(2);
     }
     else {
       show_command_information(1);
