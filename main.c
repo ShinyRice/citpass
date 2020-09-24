@@ -1,8 +1,6 @@
-/* Forgive the excess of obvious comments in this source. They ease subsequent readings of the code
- * that I make, to consolidate what I learnt already. */
-
 #define _POSIX_C_SOURCE 200809L
 /* C standard library, part of glibc */
+#include <limits.h>
 #include <stdio.h> /* fputs, fgets... */
 #include <stdlib.h> /* File I/O */
 #include <string.h> /* String manipulation */
@@ -18,11 +16,6 @@
 #define RANDSTR_LEN 50
 #define TITLE_LEN 100
 #define PASS_LEN 200
-
-/* In order to avoid getting a nice fat warning, a quick workaround is to declare fileno() explicitly in the source
- * I wrote, instead of having that done in the corresponding header file...
- * https://stackoverflow.com/questions/46213840/get-rid-of-warning-implicit-declaration-of-function-fileno-in-flex */
-int fileno(FILE *stream);
 
 /* Functions */
 void show_command_information(const int sit) {
@@ -57,18 +50,15 @@ void show_command_information(const int sit) {
 
 /* Setting the path to the directory where passwords are stored, done through an environment variable */
 void setting_dir_path(const char* home_path, char* dir_path) {
-  char* store_location = getenv("CITPASS_DIR");
-  /* If storelocation is null, it'll be 0. It's a pointer pointing to nothing, in other words, the environment
-   * variable hasn't been set and is just an empty string, and so we jump to the else case, since 0 is a boolean false.
-   * If it's not empty we use it as the password folder location */
-  if (store_location) {
-    strncpy(dir_path, store_location, 200);
+  /* I don't think I need to define some sort of intermediate variable (store_location) to compare */
+  snprintf(dir_path, 200, "%s", getenv("CITPASS_DIR"));
+  if (strncmp(dir_path, "", 200)) {
   }
   else {
-    strncpy(dir_path, home_path, 200);
-    strncat(dir_path, "/.local/share/citpass", 200);
+    snprintf(dir_path, 200, "%s%s", home_path, "/.local/share/citpass");
   }
 }
+
 
 /* Fetching password from stdin, not letting it show up on the terminal */
 void password_input(char* password) {
@@ -224,13 +214,12 @@ static int decrypt(const char* src_file_path, const char* message, const size_t 
 
 void initialize() {
   char home_path[100];
-  strncpy(home_path, getenv("HOME"), 100);
+  snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
 
   char index_path[300];
-  strncpy(index_path, dir_path, 280);
-  strncat(index_path, "/index", 280);
+  snprintf(index_path, 280, "%s%s", dir_path, "/index");
 
   if (access(dir_path, F_OK) != -1) {
     fputs("The folder at ", stdout);
@@ -270,17 +259,15 @@ void initialize() {
 /* Adding a password to the folder, and adding the random filename to the index */
 void add_password() {
   char home_path[100];
-  strncpy(home_path, getenv("HOME"), 100);
+  snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
 
   char index_path[300];
-  strncpy(index_path, dir_path, 280);
-  strcat(index_path, "/index");
+  snprintf(index_path, 280, "%s%s", dir_path, "/index");
 
   char file_path[300];
-  strncpy(file_path, dir_path, 280);
-  strcat(file_path, "/");
+  snprintf(file_path, 280, "%s%s", dir_path, "/");
 
   if (access(dir_path, F_OK) != -1) {
     if (access(index_path, F_OK) != -1) {
@@ -296,7 +283,7 @@ void add_password() {
        * I want is some junk to put as a filename, it's not a mission critical task */
       srand(time(0));
       rand_junk_str(rand_str, RANDSTR_LEN);
-      strncat(file_path, rand_str, 290);
+      snprintf(file_path + strlen(file_path), sizeof(file_path) - strlen(file_path), "%s", rand_str);
 
       fputs("Title: ", stdout);
       fgets(title, 100, stdin);
@@ -340,9 +327,12 @@ void add_password() {
         fputs("Unable to decrypt index file. Aborting.\n", stdout);
         exit(EXIT_FAILURE);
       }
-      strcpy(index_entry, rand_str);
-      strcat(index_entry, ",");
-      strcat(index_entry, title);
+      snprintf(index_entry, RANDSTR_LEN + TITLE_LEN, "%s%s%s", rand_str, ",", title);
+      /* Append index_entry to index_buf, overwrite index_path with encrypt() */
+      if (encrypt(index_path, index_buf, index_len) != 0) {
+        fputs("Unable to encrypt index file. Aborting.\n", stdout);
+        exit(EXIT_FAILURE);
+      }
    }
    else {
      fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
@@ -357,13 +347,13 @@ void add_password() {
 
 void list_passwords() {
   char home_path[100];
-  strncpy(home_path, getenv("HOME"), 100);
+  snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
 
   char index_path[300];
-  strncpy(index_path, dir_path, 280);
-  strncat(index_path, "/index", 280);
+  snprintf(index_path, 280, "%s%s", dir_path, "/index");
+
   if (access(dir_path, F_OK) != -1) {
     if (access(index_path, F_OK) != -1) {
       size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
@@ -372,19 +362,17 @@ void list_passwords() {
         fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
         exit(EXIT_FAILURE);
       }
-      /* Index file decryption */
       if (decrypt(index_path, index_buf, index_len) != 0) {
         fputs("Unable to decrypt index file. Aborting.\n", stdout);
         exit(EXIT_FAILURE);
       }
-      /* Let's first figure out how many lines we have in the index file, by counting the amount of newline characters, */
       unsigned int lines = 0;
       for (unsigned int n = 0; n < index_len; n++) {
         if (index_buf[n] == '\n') {
           lines++;
         }
       }
-       /* First, we allocate the first "column", of the 2D char array, */
+       /* We allocate the first "column", of the 2D char array, */
       char** titles = calloc(lines, sizeof(char));
       if (! titles) {
         fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
@@ -393,6 +381,7 @@ void list_passwords() {
         exit(EXIT_FAILURE);
       }
       for (unsigned int n = 0; n < lines; n++) {
+        /* Then the memory for each "row" */
         titles[n] = calloc(TITLE_LEN, sizeof(char));
         if (! titles[n]) {
           fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
@@ -429,17 +418,15 @@ void list_passwords() {
 
 void rm_password() {
   char home_path[100];
-  strncpy(home_path, getenv("HOME"), 100);
+  snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
 
   char index_path[300];
-  strncpy(index_path, dir_path, 280);
-  strncat(index_path, "/index", 280);
+  snprintf(index_path, 280, "%s%s", dir_path, "/index");
 
   char file_path[300];
-  strncpy(file_path, dir_path, 280);
-  strcat(file_path, "/");
+  snprintf(file_path, 280, "%s%s", dir_path, "/");
 
   if (access(dir_path, F_OK) != -1) {
     if (access(index_path, F_OK) != -1) {
@@ -508,17 +495,15 @@ void rm_password() {
 
 void get_password() {
   char home_path[100];
-  strncpy(home_path, getenv("HOME"), 100);
+  snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
 
   char index_path[300];
-  strncpy(index_path, dir_path, 280);
-  strncat(index_path, "/index", 280);
+  snprintf(index_path, 280, "%s%s", dir_path, "/index");
 
   char file_path[300];
-  strncpy(file_path, dir_path, 280);
-  strcat(file_path, "/");
+  snprintf(file_path, 280, "%s%s", dir_path, "/");
 
   if (access(dir_path, F_OK) != -1) {
     if (access(index_path, F_OK) != -1) {
