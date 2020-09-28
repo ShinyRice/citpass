@@ -2,7 +2,7 @@
 
 **I'm not sure how long it will take me to get this to a usable state. Don't depend on this for now.**
 
-This is a simple password manager for Linux, inspired in part by [pass](https://www.passwordstore.org/).
+This is a simple password manager for GNU/Linux, inspired in part by [pass](https://www.passwordstore.org/).
 
 It is similar to pass in the sense that it aims to be simple, lightweight, as well as having readable code,
 allowing for ease of maintenance. However, citpass differs from it, by

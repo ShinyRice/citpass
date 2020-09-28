@@ -50,18 +50,18 @@ void show_command_information(const int sit) {
 
 /* Setting the path to the directory where passwords are stored, done through an environment variable */
 void setting_dir_path(const char* home_path, char* dir_path) {
-  /* I don't think I need to define some sort of intermediate variable (store_location) to compare */
   snprintf(dir_path, 200, "%s", getenv("CITPASS_DIR"));
-  if (strncmp(dir_path, "", 200)) {
-  }
-  else {
+  if (! (strncmp(dir_path, "", 200))) {
+    /* If it's not set, strncmp() returns 0, which is a boolean false,
+     * so the flow is directed here. The directory path's set to the default and
+     * that's that */
     snprintf(dir_path, 200, "%s%s", home_path, "/.local/share/citpass");
   }
 }
 
 
 /* Fetching password from stdin, not letting it show up on the terminal */
-void password_input(char* password) {
+void password_input(char* pass, size_t pass_len) {
   /* These 5 lines down here are required for preventing password input from being shown */
   struct termios oldt;
   tcgetattr(STDIN_FILENO, &oldt);
@@ -70,14 +70,14 @@ void password_input(char* password) {
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
   /* Here's the actual input */
-  fgets(password, PASS_LEN, stdin);
+  fgets(pass, pass_len, stdin);
 
   /* And the terminal is brought back to how it was */
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 
 /* Generating a random string */
-static char* rand_junk_str(char* str, size_t size) {
+char* rand_junk_str(char* str, size_t size) {
   const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   if (size) {
     --size;
@@ -123,7 +123,7 @@ off_t get_file_size(const char* path) {
  * into titles[], which means that "Titles" will invariably be the first string in that array.
  * We won't ignore that when parsing, but we will ignore it when printing titles[], simply by starting
  * from titles[1] and not titles[0] */
-void parse_index_file(char** titles, const unsigned int lines, const char* buffer, const size_t buf_len) {
+void get_titles_from_index(char** titles, const unsigned int lines, const char* buffer, const size_t buf_len) {
   unsigned int n = 0;
   unsigned int p = 0;
   unsigned int m;
@@ -157,12 +157,47 @@ void parse_index_file(char** titles, const unsigned int lines, const char* buffe
   }
 }
 
-static int encrypt(const char* dest_file_path, const char* message, const size_t message_len) {
+void get_filenames_from_index(char** filenames, const unsigned int lines, const char* buffer, const size_t buf_len) {
+  unsigned int n = 0;
+  unsigned int p = 0;
+  unsigned int m;
+
+  /* In this loop, we're just walking through each character of the 1D array that is the file buffer,
+   * until we reach the last element of the array */
+  while (n < buf_len) {
+    /* If we find a comma, that means we've reached a title. */
+    if (buffer[n] == ',') {
+      /* We advance by one char, and find the first char of the title, */
+      n++;
+      /* And set a variable which will be the index of the string where the title'll be stored */
+      m = 0;
+      /* Now, we walk char by char through the buffer again, storing characters in the string at filenames[p] until we find
+       * a newline char, and until the end of the file, */
+      while (buffer[n] != '\n' && n < buf_len) {
+        filenames[p][m] = buffer[n];
+        m++;
+        n++;
+      }
+      /* Since this is done char by char, instead of treating everything with string manipulation
+       * functions, we need to add the termination character at the end of the string, */
+      m++;
+      filenames[p][m] = '\0';
+      /* And if we're not at the end of the buffer, we jump to the next title string */
+      if (n < buf_len) {
+        p++;
+      }
+    }
+    n++;
+  }
+}
+
+int encrypt(const char* dest_file_path, const char* message, const size_t message_len) {
   unsigned char ciphertext[message_len + crypto_secretbox_MACBYTES];
   char mast_pass[PASS_LEN];
   fputs("Master password: ", stdout);
-  password_input(mast_pass);
+  password_input(mast_pass, PASS_LEN);
   fputs("\n", stdout);
+
   unsigned char salt[crypto_pwhash_SALTBYTES];
   unsigned char key[crypto_secretbox_KEYBYTES];
 
@@ -183,16 +218,16 @@ static int encrypt(const char* dest_file_path, const char* message, const size_t
   return 0;
 }
 
-static int decrypt(const char* src_file_path, const char* message, const size_t message_len) {
+int decrypt(const char* src_file_path, const char* message, const size_t message_len) {
   char mast_pass[PASS_LEN];
   fputs("Master password: ", stdout);
-  password_input(mast_pass);
+  password_input(mast_pass, PASS_LEN);
+  fputs("\n", stdout);
 
   unsigned char salt[crypto_pwhash_SALTBYTES];
   unsigned char key[crypto_secretbox_KEYBYTES];
 
   randombytes_buf(salt, sizeof(salt));
-  fputs("\n", stdout);
   if (crypto_pwhash(key, sizeof(key), mast_pass, strlen(mast_pass), salt, crypto_pwhash_OPSLIMIT_MODERATE, crypto_pwhash_MEMLIMIT_MODERATE, crypto_pwhash_ALG_DEFAULT) != 0) {
     fputs("Ran out of memory while deriving key from master password. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
@@ -217,7 +252,6 @@ void initialize() {
   snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
-
   char index_path[300];
   snprintf(index_path, 280, "%s%s", dir_path, "/index");
 
@@ -262,87 +296,78 @@ void add_password() {
   snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
-
   char index_path[300];
   snprintf(index_path, 280, "%s%s", dir_path, "/index");
-
   char file_path[300];
   snprintf(file_path, 280, "%s%s", dir_path, "/");
 
   if (access(dir_path, F_OK) != -1) {
-    if (access(index_path, F_OK) != -1) {
-      char rand_str[RANDSTR_LEN];
-      char index_entry[RANDSTR_LEN + TITLE_LEN];
+    if (! (access(index_path, F_OK) != -1)) {
+      fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
+      exit(EXIT_FAILURE);
+    }
+  }
+  else {
+    fputs("The folder at ", stdout);
+    fputs(dir_path, stdout);
+    fputs(" doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
 
-      char title[TITLE_LEN];
-      char password[PASS_LEN];
-      char username[100];
-      char url[200];
-      char notes[1000];
-      /* We initialize the seed for generating random strings. Now, this might be a shitty way to get a seed, but all
-       * I want is some junk to put as a filename, it's not a mission critical task */
-      srand(time(0));
-      rand_junk_str(rand_str, RANDSTR_LEN);
-      snprintf(file_path + strlen(file_path), sizeof(file_path) - strlen(file_path), "%s", rand_str);
+  char rand_str[RANDSTR_LEN];
+  /* We initialize the seed for generating random strings. Now, this might be a shitty way to get a seed, but all
+   * I want is some junk to put as a filename, it's not a mission critical task */
+  srand(time(0));
+  rand_junk_str(rand_str, RANDSTR_LEN);
+  snprintf(file_path + strlen(file_path), sizeof(file_path) - strlen(file_path), "%s", rand_str);
 
-      fputs("Title: ", stdout);
-      fgets(title, 100, stdin);
+  char title[TITLE_LEN];
+  char password[PASS_LEN];
+  char username[100];
+  char url[200];
+  char notes[1000];
 
-      fputs("Password: ", stdout);
-      password_input(password);
-      fputs("\n", stdout);
+  fputs("Title: ", stdout);
+  fgets(title, TITLE_LEN, stdin);
 
-      fputs("Username: ", stdout);
-      fgets(username, 100, stdin);
+  fputs("Password: ", stdout);
+  password_input(password, PASS_LEN);
+  fputs("\n", stdout);
 
-      fputs("URL: ", stdout);
-      fgets(url, 200, stdin);
+  fputs("Username: ", stdout);
+  fgets(username, 100, stdin);
 
-      fputs("Notes: ", stdout);
-      fgets(notes, 1000, stdin);
+  fputs("URL: ", stdout);
+  fgets(url, 200, stdin);
 
-      /* strlen() excludes the null byte, but strcat() includes it, so when allocating the entire
-       * entry on the stack, we need to take that into account. We need 5 extra elements for the
-       * null bytes at the end, and 4 new line characters. */
-      unsigned int entry_len = strlen(title) + strlen(password) + strlen(username) + strlen(url) + strlen(notes) + 9;
-      char entry[entry_len];
-      strcpy(entry, title);
-      strcat(entry, "\n");
-      strcat(entry, password);
-      strcat(entry, "\n");
-      strcat(entry, username);
-      strcat(entry, "\n");
-      strcat(entry, url);
-      strcat(entry, "\n");
-      strcat(entry, notes);
+  fputs("Notes: ", stdout);
+  fgets(notes, 1000, stdin);
 
-      if (encrypt(file_path, entry, entry_len) != 0) {
-        fputs("Unable to encrypt password file. Aborting.\n", stdout);
-        exit(EXIT_FAILURE);
-      }
-      /* Now, we append the title of the entry and corresponding randomized filename to the end of the index file */
-      size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
-      char* index_buf = calloc(index_len, sizeof(char));
-      if (decrypt(index_path, index_buf, index_len) != 0) {
-        fputs("Unable to decrypt index file. Aborting.\n", stdout);
-        exit(EXIT_FAILURE);
-      }
-      snprintf(index_entry, RANDSTR_LEN + TITLE_LEN, "%s%s%s", rand_str, ",", title);
-      /* Append index_entry to index_buf, overwrite index_path with encrypt() */
-      if (encrypt(index_path, index_buf, index_len) != 0) {
-        fputs("Unable to encrypt index file. Aborting.\n", stdout);
-        exit(EXIT_FAILURE);
-      }
-   }
-   else {
-     fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
-   }
- }
- else {
-   fputs("The folder at ", stdout);
-   fputs(dir_path, stdout);
-   fputs(" doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", stdout);
- }
+  /* strlen() excludes the null byte, but strcat() includes it, so when allocating the entire
+   * entry on the stack, we need to take that into account. We need 5 extra elements for the
+   * null bytes at the end, and 4 new line characters. */
+  unsigned int entry_len = strlen(title) + strlen(password) + strlen(username) + strlen(url) + strlen(notes) + 9;
+  char entry[entry_len];
+  /* snprintf() however does include the null byte, even when writing entry_len characters to entry */
+  snprintf(entry, entry_len, "%s%s%s%s%s%s%s%s%s", title, "\n", password, "\n", username, "\n", url, "\n", notes);
+
+  if (encrypt(file_path, entry, entry_len) != 0) {
+    fputs("Unable to encrypt password file. Aborting.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
+  /* Now, we append the title of the entry and corresponding randomized filename to the end of the index file */
+  size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
+  char* index_buf = calloc(index_len + RANDSTR_LEN + strlen(title) + 1, sizeof(char));
+  if (decrypt(index_path, index_buf, index_len) != 0) {
+    fputs("Unable to decrypt index file. Aborting.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
+  snprintf(index_buf + index_len, RANDSTR_LEN + 1 + strlen(title), "%s%s%s", rand_str, ",", title);
+  /* Append index_entry to index_buf, overwrite index_path with encrypt() */
+  if (encrypt(index_path, index_buf, index_len + RANDSTR_LEN + strlen(title) + 1) != 0) {
+    fputs("Unable to encrypt index file. Aborting.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
 }
 
 void list_passwords() {
@@ -350,70 +375,70 @@ void list_passwords() {
   snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
-
   char index_path[300];
   snprintf(index_path, 280, "%s%s", dir_path, "/index");
 
   if (access(dir_path, F_OK) != -1) {
-    if (access(index_path, F_OK) != -1) {
-      size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
-      char* index_buf = calloc(index_len, sizeof(char));
-      if (! index_buf) {
-        fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
-        exit(EXIT_FAILURE);
-      }
-      if (decrypt(index_path, index_buf, index_len) != 0) {
-        fputs("Unable to decrypt index file. Aborting.\n", stdout);
-        exit(EXIT_FAILURE);
-      }
-      unsigned int lines = 0;
-      for (unsigned int n = 0; n < index_len; n++) {
-        if (index_buf[n] == '\n') {
-          lines++;
-        }
-      }
-       /* We allocate the first "column", of the 2D char array, */
-      char** titles = calloc(lines, sizeof(char));
-      if (! titles) {
-        fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-        free(titles);
-        free(index_buf);
-        exit(EXIT_FAILURE);
-      }
-      for (unsigned int n = 0; n < lines; n++) {
-        /* Then the memory for each "row" */
-        titles[n] = calloc(TITLE_LEN, sizeof(char));
-        if (! titles[n]) {
-          fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-          unsigned int m = n - 1;
-          while (m >= 0) {
-            free(titles[m]);
-            m--;
-          }
-          /* Freeing memory twice is undefined behaviour... */
-          free(titles);
-          free(index_buf);
-          exit(EXIT_FAILURE);
-        }
-      }
-      parse_index_file(titles, lines, index_buf, index_len);
-      free(index_buf);
-      /* Printing list of titles */
-      for (unsigned int n = 0; n < lines; n++) {
-        fputs(titles[n], stdout);
-        fputs("\n", stdout);
-      }
-      free(titles);
-    }
-    else {
+    if (! (access(index_path, F_OK) != -1)) {
       fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
+      exit(EXIT_FAILURE);
     }
   }
   else {
     fputs("The folder at ", stdout);
     fputs(dir_path, stdout);
     fputs(" doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", stdout);
+    exit(EXIT_FAILURE);
   }
+
+  size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
+  char* index_buf = calloc(index_len, sizeof(char));
+  if (! index_buf) {
+    fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
+    exit(EXIT_FAILURE);
+  }
+  if (decrypt(index_path, index_buf, index_len) != 0) {
+    fputs("Unable to decrypt index file. Aborting.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
+  unsigned int lines = 0;
+  for (unsigned int n = 0; n < index_len; n++) {
+    if (index_buf[n] == '\n') {
+      lines++;
+    }
+  }
+   /* We allocate the first "column", of the 2D char array, */
+  char** titles = calloc(lines, sizeof(char));
+  if (! titles) {
+    fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+    free(titles);
+    free(index_buf);
+    exit(EXIT_FAILURE);
+  }
+  for (unsigned int n = 0; n < lines; n++) {
+    /* Then the memory for each "row" */
+    titles[n] = calloc(TITLE_LEN, sizeof(char));
+    if (! titles[n]) {
+      fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+      unsigned int m = n - 1;
+      while (m >= 0) {
+        free(titles[m]);
+        m--;
+      }
+      /* Freeing memory twice is undefined behaviour... */
+      free(titles);
+      free(index_buf);
+      exit(EXIT_FAILURE);
+    }
+  }
+  get_titles_from_index(titles, lines, index_buf, index_len);
+  free(index_buf);
+  /* Printing list of titles */
+  for (unsigned int n = 0; n < lines; n++) {
+    fputs(titles[n], stdout);
+    fputs("\n", stdout);
+  }
+  free(titles);
 }
 
 void rm_password() {
@@ -421,76 +446,135 @@ void rm_password() {
   snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
-
   char index_path[300];
-  snprintf(index_path, 280, "%s%s", dir_path, "/index");
-
+  snprintf(index_path, 300, "%s%s", dir_path, "/index");
   char file_path[300];
-  snprintf(file_path, 280, "%s%s", dir_path, "/");
+  snprintf(file_path, 300, "%s%s", dir_path, "/");
+  char option[TITLE_LEN];
 
   if (access(dir_path, F_OK) != -1) {
-    if (access(index_path, F_OK) != -1) {
-      size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
-      char* index_buf = calloc(index_len, sizeof(char));
-      if (! index_buf) {
-        fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
-        exit(EXIT_FAILURE);
-      }
-      if (decrypt(index_path, index_buf, index_len) != 0) {
-        fputs("Unable to decrypt index file. Aborting.\n", stdout);
-        exit(EXIT_FAILURE);
-      }
-      unsigned int lines = 0;
-      for (unsigned int n = 0; n < index_len; n++) {
-        if (index_buf[n] == '\n') {
-          lines++;
-        }
-      }
-      char** titles = calloc(lines, sizeof(char));
-      if (! titles) {
-        fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-        free(titles);
-        free(index_buf);
-        exit(EXIT_FAILURE);
-      }
-      for (unsigned int n = 0; n < lines; n++) {
-        titles[n] = calloc(TITLE_LEN, sizeof(char));
-        if (! titles[n]) {
-          fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-          unsigned int m = n - 1;
-          while (m >= 0) {
-            free(titles[m]);
-            m--;
-          }
-          /* Freeing memory twice is undefined behaviour... */
-          free(titles);
-          free(index_buf);
-          exit(EXIT_FAILURE);
-        }
-      }
-      parse_index_file(titles, lines, index_buf, index_len);
-      free(index_buf);
-      /* Title printing to stdout */
-      for (unsigned int n = 1; n < lines; n++) {
-        fputs(titles[n], stdout);
-        fputs("\n", stdout);
-      }
-      free(titles);
-      /* User selects entry */
-      /* Index file decryption */
-      /* Entry is deleted from index file */
-      /* Index file encryption */
-      /* Selected password file is deleted */
-   }
-    else {
+    if (! (access(index_path, F_OK) != -1)) {
       fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
+      exit(EXIT_FAILURE);
     }
   }
   else {
     fputs("The folder at ", stdout);
     fputs(dir_path, stdout);
     fputs(" doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", stdout);
+    exit(EXIT_FAILURE);
   }
+
+  size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
+  char* index_buf = calloc(index_len, sizeof(char));
+  if (! index_buf) {
+    fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
+  if (decrypt(index_path, index_buf, index_len) != 0) {
+    fputs("Unable to decrypt index file. Aborting.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
+  unsigned int lines = 0;
+  for (unsigned int n = 0; n < index_len; n++) {
+    if (index_buf[n] == '\n') {
+      lines++;
+    }
+  }
+  /* Now we allocate memory for the entry titles */
+  char** titles = calloc(lines, sizeof(char));
+  if (! titles) {
+    fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+    free(titles);
+    free(index_buf);
+    exit(EXIT_FAILURE);
+  }
+  for (unsigned int n = 0; n < lines; n++) {
+    titles[n] = calloc(TITLE_LEN, sizeof(char));
+    if (! titles[n]) {
+      fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+      unsigned int m = n - 1;
+      while (m >= 0) {
+        free(titles[m]);
+        m--;
+      }
+      /* Freeing memory twice is undefined behaviour... */
+      free(titles);
+      free(index_buf);
+      exit(EXIT_FAILURE);
+    }
+  }
+  /* And now we parse the index file, filling titles[] up */
+  get_titles_from_index(titles, lines, index_buf, index_len);
+  /* Title printing to stdout */
+  for (unsigned int n = 1; n < lines; n++) {
+    fputs(titles[n], stdout);
+    fputs("\n", stdout);
+  }
+  /* User selects entry */
+  int match = 1;
+  unsigned int sel = 0;
+  do {
+    fputs("Entry: ", stdout);
+    fgets(option, TITLE_LEN, stdin);
+    for (unsigned int n = 1; n < lines; n++) {
+      match = strncmp(titles[n], option, TITLE_LEN);
+      if (! match) {
+        sel = n;
+        break;
+      }
+    }
+    if (match) {
+      fputs("Incorrect entry.\n", stdout);
+    }
+  } while (match != 0);
+  free(titles);
+  /* Same thing as we did with titles, we do with the randomized filenames */
+  char** filenames = calloc(lines, sizeof(char));
+  if (! filenames) {
+    fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+    free(filenames);
+    free(index_buf);
+    exit(EXIT_FAILURE);
+  }
+  for (unsigned int n = 0; n < lines; n++) {
+    filenames[n] = calloc(RANDSTR_LEN, sizeof(char));
+    if (! filenames[n]) {
+      fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+      unsigned int m = n - 1;
+      while (m >= 0) {
+        free(filenames[m]);
+        m--;
+      }
+      free(filenames);
+      free(index_buf);
+      exit(EXIT_FAILURE);
+    }
+  }
+  /* And now we parse the index file again, filling filenames[] up */
+  get_filenames_from_index(filenames, lines, index_buf, index_len);
+  /* Concatenation of file_path and the actual randomized file name */
+  snprintf(file_path + strlen(file_path), sizeof(file_path) - strlen(file_path), "%s", filenames[sel]);
+  /* So now we can delete the indicated password file. Now, using remove() might not be
+   * the most adequate way to remove a file which has sensitive information,
+   * I might look into using something better later */
+  if (! remove(file_path)) {
+    fputs("Successfully deleted selected password file.\n", stdout);
+  }
+  else {
+    fputs("Failed to delete selected password file. Aborting.\n", stdout);
+    free(index_buf);
+    free(filenames);
+    exit(EXIT_FAILURE);
+  }
+  /* Entry is deleted from index file */
+  free(filenames);
+  /* Index file encryption */
+  if (encrypt(index_path, index_buf, index_len) != 0) {
+    fputs("Failed to encrypt index file. Aborting.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
+  free(index_buf);
 }
 
 void get_password() {
@@ -498,82 +582,83 @@ void get_password() {
   snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200];
   setting_dir_path(home_path, dir_path);
-
   char index_path[300];
   snprintf(index_path, 280, "%s%s", dir_path, "/index");
-
   char file_path[300];
   snprintf(file_path, 280, "%s%s", dir_path, "/");
 
   if (access(dir_path, F_OK) != -1) {
-    if (access(index_path, F_OK) != -1) {
-      size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
-      char* index_buf = calloc(index_len, sizeof(char));
-      if (! index_buf) {
-        fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
-        exit(EXIT_FAILURE);
-      }
-      if (decrypt(index_path, index_buf, index_len) != 0) {
-        fputs("Unable to decrypt index file. Aborting.\n", stdout);
-        exit(EXIT_FAILURE);
-      }
-      unsigned int lines = 0;
-      for (unsigned int n = 0; n < index_len; n++) {
-        if (index_buf[n] == '\n') {
-          lines++;
-        }
-      }
-      char** titles = calloc(lines, sizeof(char));
-      if (! titles) {
-        fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-        free(titles);
-        free(index_buf);
-        exit(EXIT_FAILURE);
-      }
-      for (unsigned int n = 0; n < lines; n++) {
-        titles[n] = calloc(TITLE_LEN, sizeof(char));
-        if (! titles[n]) {
-          fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-          unsigned int m = n - 1;
-          while (m >= 0) {
-            free(titles[m]);
-            m--;
-          }
-          /* Freeing memory twice is undefined behaviour... */
-          free(titles);
-          free(index_buf);
-          exit(EXIT_FAILURE);
-        }
-      }
-      parse_index_file(titles, lines, index_buf, index_len);
-      free(index_buf);
-      for (unsigned int n = 0; n < lines; n++) {
-        fputs(titles[n], stdout);
-        fputs("\n", stdout);
-      }
-      free(titles);
-      /* User selects entry */
-      /* Password file decryption */
-      size_t file_len = ((size_t)get_file_size(file_path) - crypto_secretbox_MACBYTES)/sizeof(char);
-      char* file_buf = calloc(file_len, sizeof(char));
-      if (decrypt(file_path, file_buf, file_len) != 0) {
-        fputs("Unable to decrypt password file. Aborting.\n", stdout);
-        free(file_buf);
-        exit(EXIT_FAILURE);
-      }
-      /* Password is printed to stdout/piped to clipboard manager */
-      free(file_buf);
-      /* Password file encryption */
+    if (! (access(index_path, F_OK) != -1)) {
+      fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
+      exit(EXIT_FAILURE);
     }
-   else {
-     fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
-   }
- }
- else {
-   fputs("The folder at ", stdout);
-   fputs(dir_path, stdout);
-   fputs(" doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", stdout);
- }
+  }
+  else {
+    fputs("The folder at ", stdout);
+    fputs(dir_path, stdout);
+    fputs(" doesn't exist. Please run \"citpass init\" to create both it and the index file within.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
+
+  size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
+  char* index_buf = calloc(index_len, sizeof(char));
+  if (! index_buf) {
+    fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
+    exit(EXIT_FAILURE);
+  }
+
+  if (decrypt(index_path, index_buf, index_len) != 0) {
+    fputs("Unable to decrypt index file. Aborting.\n", stdout);
+    exit(EXIT_FAILURE);
+  }
+
+  unsigned int lines = 0;
+  for (unsigned int n = 0; n < index_len; n++) {
+    if (index_buf[n] == '\n') {
+      lines++;
+    }
+  }
+
+  char** titles = calloc(lines, sizeof(char));
+  if (! titles) {
+    fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+    free(titles);
+    free(index_buf);
+    exit(EXIT_FAILURE);
+  }
+  for (unsigned int n = 0; n < lines; n++) {
+    titles[n] = calloc(TITLE_LEN, sizeof(char));
+    if (! titles[n]) {
+      fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+      unsigned int m = n - 1;
+      while (m >= 0) {
+        free(titles[m]);
+        m--;
+      }
+      /* Freeing memory twice is undefined behaviour... */
+      free(titles);
+      free(index_buf);
+      exit(EXIT_FAILURE);
+    }
+  }
+  get_titles_from_index(titles, lines, index_buf, index_len);
+  free(index_buf);
+  for (unsigned int n = 0; n < lines; n++) {
+    fputs(titles[n], stdout);
+    fputs("\n", stdout);
+  }
+  free(titles);
+  /* User selects entry */
+  /* Password file decryption */
+  size_t file_len = ((size_t)get_file_size(file_path) - crypto_secretbox_MACBYTES)/sizeof(char);
+  char* file_buf = calloc(file_len, sizeof(char));
+  if (decrypt(file_path, file_buf, file_len) != 0) {
+    fputs("Unable to decrypt password file. Aborting.\n", stdout);
+    free(file_buf);
+    exit(EXIT_FAILURE);
+  }
+  /* Password is printed to stdout/piped to clipboard manager */
+  free(file_buf);
 }
 
 int main(int argc, char *argv[]) {
