@@ -45,7 +45,7 @@ void show_command_information(const int sit) {
   }
 }
 
-void check_folder_index(char* dir_path, char* index_path) {
+void check_folder_index(const char* dir_path, const char* index_path) {
   if (access(dir_path, F_OK) != -1) {
     if (! (access(index_path, F_OK) != -1)) {
       fputs("The index file doesn't exist. Please run \"citpass init\" to create it.\n", stdout);
@@ -93,11 +93,13 @@ off_t get_file_size(const char* path) {
   /* fp == file pointer */
   FILE* fp = fopen(path, "r");
   int fd = fileno(fp);
+
   if (fd == -1) {
     fputs("Could not read index file. Aborting.", stdout);
     fclose(fp);
     exit(EXIT_FAILURE);
   }
+
   struct stat buf;
   /* With fstat() we get file attributes and put them in buf. buf.st_size is the size of the file in bytes. */
   int stat = fstat(fd, &buf);
@@ -106,6 +108,7 @@ off_t get_file_size(const char* path) {
     fclose(fp);
     exit(EXIT_FAILURE);
   }
+
   off_t file_size = buf.st_size;
   /* I'll set a large upper limit for the file, 1 MB. */
   if (file_size > 1000000) {
@@ -121,10 +124,10 @@ off_t get_file_size(const char* path) {
  * into titles[], which means that "Titles" will invariably be the first string in that array.
  * We won't ignore that when parsing, but we will ignore it when printing titles[], simply by starting
  * from titles[1] and not titles[0] */
-void get_titles_from_index(char** titles, const unsigned int lines, const char* buffer, const size_t buf_len) {
+void get_titles_from_index(char** titles, const size_t lines, const char* buffer, const size_t buf_len) {
   unsigned int n = 0;
   unsigned int p = 0;
-  unsigned int m;
+  unsigned int m = 0;
 
   /* In this loop, we're just walking through each character of the 1D array that is the file buffer,
    * until we reach the last element of the array */
@@ -138,14 +141,18 @@ void get_titles_from_index(char** titles, const unsigned int lines, const char* 
       /* Now, we walk char by char through the buffer again, storing characters in the string at titles[p] until we find
        * a newline char, and until the end of the file, */
       while (buffer[n] != '\n' && n < buf_len) {
-        titles[p][m] = buffer[n];
+        if (m < TITLE_LEN && p < lines){
+          titles[p][m] = buffer[n];
+        }
         m++;
         n++;
       }
       /* Since this is done char by char, instead of treating everything with string manipulation
        * functions, we need to add the termination character at the end of the string, */
-      m++;
-      titles[p][m] = '\0';
+      if (m < TITLE_LEN && p < lines){
+        titles[p][m] = '\0';
+        m++;
+      }
       /* And if we're not at the end of the buffer, we jump to the next title string */
       if (n < buf_len) {
         p++;
@@ -155,24 +162,31 @@ void get_titles_from_index(char** titles, const unsigned int lines, const char* 
   }
 }
 
-void get_filenames_from_index(char** filenames, const unsigned int lines, const char* buffer, const size_t buf_len) {
+void get_filenames_from_index(char** filenames, const size_t lines, const char* buffer, const size_t buf_len) {
   unsigned int n = 0;
   unsigned int p = 0;
-  unsigned int m;
+  unsigned int m = 0;
 
   while (n < buf_len) {
+    /* So we start out parsing what is already a filename, given that the first
+     * column is that. */
     if (buffer[n] == ',') {
-      n++;
-      m = 0;
+      /* If we find a comma, we null terminate the filename. Just as a sanity check, I
+       * make sure I'm not writing that character whereever... */
+      if (m - 1 < RANDSTR_LEN && p < lines){
+        filenames[p][m - 1] = '\0';
+      }
+      /* Now we just ignore every character until we find a newline character, */
       while (buffer[n] != '\n' && n < buf_len) {
-        m++;
         n++;
       }
-      m++;
-      filenames[p][m] = '\0';
+      /* Now n should be at the element of buffer[] where there's a newline, so
+       * it's time to write to the next string in filenames[][] */
       if (n < buf_len) {
         p++;
       }
+      /* And advance n by one, so that it's at the first char of a filename */
+      n++;
     }
     filenames[p][m] = buffer[n];
     m++;
@@ -180,7 +194,7 @@ void get_filenames_from_index(char** filenames, const unsigned int lines, const 
   }
 }
 
-unsigned int get_entry_from_user(char** titles, unsigned int lines) {
+unsigned int get_entry_from_user(char** titles, const unsigned int lines) {
   char option[TITLE_LEN] = {0};
   int match = 1;
   unsigned int sel = 0;
@@ -263,7 +277,7 @@ int decrypt(const char* src_file_path, const char* message, const size_t message
   return 0;
 }
 
-void initialize(char* dir_path, char* index_path) {
+void initialize(const char* dir_path, const char* index_path) {
   if (access(dir_path, F_OK) != -1) {
     fputs("The folder at ", stdout);
     fputs(dir_path, stdout);
@@ -300,7 +314,7 @@ void initialize(char* dir_path, char* index_path) {
 }
 
 /* Adding a password to the folder, and adding the random filename to the index */
-void add_password(const char* dir_path, char* index_path, char* file_path) {
+void add_password(const char* index_path, char* file_path) {
   char rand_str[RANDSTR_LEN] = {0};
   /* We initialize the seed for generating random strings. Now, this might be a shitty way to get a seed, but all
    * I want is some junk to put as a filename, it's not a mission critical task */
@@ -357,7 +371,7 @@ void add_password(const char* dir_path, char* index_path, char* file_path) {
   }
 }
 
-void list_passwords(char* dir_path, char* index_path, char* file_path) {
+void list_passwords(const char* index_path) {
   size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
   char* index_buf = calloc(index_len, sizeof(char));
 
@@ -409,7 +423,7 @@ void list_passwords(char* dir_path, char* index_path, char* file_path) {
   free(titles);
 }
 
-void rm_password(char* dir_path, char* index_path, char* file_path) {
+void rm_password(const char* index_path, char* file_path) {
   size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
   char* index_buf = calloc(index_len, sizeof(char));
 
@@ -510,7 +524,7 @@ void rm_password(char* dir_path, char* index_path, char* file_path) {
   free(index_buf);
 }
 
-void get_password(char* dir_path, char* index_path, char* file_path) {
+void get_password(const char* index_path, char* file_path) {
   size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
   char* index_buf = calloc(index_len, sizeof(char));
 
@@ -544,7 +558,6 @@ void get_password(char* dir_path, char* index_path, char* file_path) {
         free(titles[m]);
         m--;
       }
-      /* Freeing memory twice is undefined behaviour... */
       free(titles);
       free(index_buf);
       exit(EXIT_FAILURE);
@@ -586,21 +599,22 @@ int main(int argc, char *argv[]) {
     fputs("File encryption is not available. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
   }
+  
   int init = strncmp(argv[1], "init", 5);
   int add = strncmp(argv[1], "add", 5);
   int ls = ((strncmp(argv[1], "ls", 5) == 0) || (strncmp(argv[1], "list", 5) == 0) || (strncmp(argv[1], "show", 5) == 0)) ? 0 : 1;
   int rm = strncmp(argv[1], "rm", 5);
   int get = strncmp(argv[1], "get", 5);
-
   char home_path[100] = {0};
-  snprintf(home_path, 100, "%s", getenv("HOME"));
   char dir_path[200] = {0};
+  char index_path[300] = {0};
+  char file_path[300] = {0};
+
+  snprintf(file_path, 300, "%s%s", dir_path, "/");
+  snprintf(home_path, 100, "%s", getenv("HOME"));
   snprintf(dir_path, 200, "%s", getenv("CITPASS_DIR"));
   if (! (strncmp(dir_path, "", 200))) snprintf(dir_path, 200, "%s%s", home_path, "/.local/share/citpass");
-  char index_path[300] = {0};
-  snprintf(index_path, 280, "%s%s", dir_path, "/index");
-  char file_path[300] = {0};
-  snprintf(file_path, 280, "%s%s", dir_path, "/");
+  snprintf(index_path, 300, "%s%s", dir_path, "/index");
 
   switch (argc) {
   case 2:
@@ -609,19 +623,19 @@ int main(int argc, char *argv[]) {
     }
     else if (add == 0) {
       check_folder_index(dir_path, index_path);
-      add_password(dir_path, index_path, file_path);
+      add_password(index_path, file_path);
     }
     else if (ls == 0) {
       check_folder_index(dir_path, index_path);
-      list_passwords(dir_path, index_path, file_path);
+      list_passwords(index_path);
     }
     else if (rm == 0) {
       check_folder_index(dir_path, index_path);
-      rm_password(dir_path, index_path, file_path);
+      rm_password(index_path, file_path);
     }
     else if (get == 0) {
       check_folder_index(dir_path, index_path);
-      get_password(dir_path, index_path, file_path);
+      get_password(index_path, file_path);
     }
     else {
       show_command_information(1);
