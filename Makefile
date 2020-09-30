@@ -1,10 +1,10 @@
 COMPILER = cc
-CFLAGS = -std=c99 -Wall
+CFLAGS = -std=c99 -Wall -Wpedantic -Wextra
 LDFLAGS = -lsodium
 default: citpass
 
 citpass:
-	$(COMPILER) -o citpass $(CFLAGS) main.c $(LDFLAGS)
+	$(COMPILER) $(CFLAGS) main.c -o citpass $(LDFLAGS)
 
 install:
 	cp citpass /usr/bin/
