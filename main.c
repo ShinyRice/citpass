@@ -13,9 +13,10 @@
 /* Libsodium */
 #include <sodium.h> /* Encryption */
 
+#define PASS_LEN 200
+#define PATH_LEN 300
 #define RANDSTR_LEN 50
 #define TITLE_LEN 100
-#define PASS_LEN 200
 
 /* Functions */
 void show_command_information(const int sit) {
@@ -125,9 +126,12 @@ off_t get_file_size(const char* path) {
  * We won't ignore that when parsing, but we will ignore it when printing titles[], simply by starting
  * from titles[1] and not titles[0] */
 void get_titles_from_index(char** titles, const size_t lines, const char* buffer, const size_t buf_len) {
+  /* which char in the buffer are we at... */
   unsigned int n = 0;
-  unsigned int p = 0;
-  unsigned int m = 0;
+  /* which string are we at... */
+  unsigned int str = 0;
+  /* which char in the string are we at... */
+  unsigned int c = 0;
 
   /* In this loop, we're just walking through each character of the 1D array that is the file buffer,
    * until we reach the last element of the array */
@@ -137,35 +141,37 @@ void get_titles_from_index(char** titles, const size_t lines, const char* buffer
       /* We advance by one char, and find the first char of the title, */
       n++;
       /* And set a variable which will be the index of the string where the title'll be stored */
-      m = 0;
+      c = 0;
       /* Now, we walk char by char through the buffer again, storing characters in the string at titles[p] until we find
        * a newline char, and until the end of the file, */
       while (buffer[n] != '\n' && n < buf_len) {
-        if (m < TITLE_LEN && p < lines){
-          titles[p][m] = buffer[n];
+        if (c < TITLE_LEN && str < lines){
+          titles[str][c] = buffer[n];
         }
-        m++;
+        c++;
         n++;
       }
       /* Since this is done char by char, instead of treating everything with string manipulation
        * functions, we need to add the termination character at the end of the string, */
-      if (m < TITLE_LEN && p < lines){
-        titles[p][m] = '\0';
-        m++;
+      if (c < TITLE_LEN && str < lines){
+        titles[str][c] = '\0';
+        c++;
       }
       /* And if we're not at the end of the buffer, we jump to the next title string */
       if (n < buf_len) {
-        p++;
+        str++;
       }
     }
     n++;
   }
 }
 
+/* "Filenames" will also be the first string in filenames[], as above, so that'll have to be compensated for, later */
 void get_filenames_from_index(char** filenames, const size_t lines, const char* buffer, const size_t buf_len) {
+  /* Same as indicated in the above function */
   unsigned int n = 0;
-  unsigned int p = 0;
-  unsigned int m = 0;
+  unsigned int str = 0;
+  unsigned int c = 0;
 
   while (n < buf_len) {
     /* So we start out parsing what is already a filename, given that the first
@@ -173,8 +179,8 @@ void get_filenames_from_index(char** filenames, const size_t lines, const char* 
     if (buffer[n] == ',') {
       /* If we find a comma, we null terminate the filename. Just as a sanity check, I
        * make sure I'm not writing that character whereever... */
-      if (m - 1 < RANDSTR_LEN && p < lines){
-        filenames[p][m - 1] = '\0';
+      if (c - 1 < RANDSTR_LEN && str < lines){
+        filenames[str][c - 1] = '\0';
       }
       /* Now we just ignore every character until we find a newline character, */
       while (buffer[n] != '\n' && n < buf_len) {
@@ -183,13 +189,13 @@ void get_filenames_from_index(char** filenames, const size_t lines, const char* 
       /* Now n should be at the element of buffer[] where there's a newline, so
        * it's time to write to the next string in filenames[][] */
       if (n < buf_len) {
-        p++;
+        str++;
       }
       /* And advance n by one, so that it's at the first char of a filename */
       n++;
     }
-    filenames[p][m] = buffer[n];
-    m++;
+    filenames[str][c] = buffer[n];
+    c++;
     n++;
   }
 }
@@ -351,7 +357,7 @@ void add_password(const char* index_path, char* file_path) {
   char entry[entry_len];
   /* snprintf() however does include the null byte, even when writing entry_len characters to entry */
   snprintf(entry, entry_len, "%s%s%s%s%s%s%s%s%s", title, "\n", password, "\n", username, "\n", url, "\n", notes);
-
+  fputs(file_path, stdout);
   if (encrypt(file_path, entry, entry_len) != 0) {
     fputs("Unable to encrypt password file. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
@@ -402,12 +408,7 @@ void list_passwords(const char* index_path) {
     titles[n] = calloc(TITLE_LEN, sizeof(char));
     if (! titles[n]) {
       fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-      unsigned int m = n - 1;
-      while (m >= 0) {
-        free(titles[m]);
-        m--;
-      }
-      /* Freeing memory twice is undefined behaviour... */
+      for (int m = n; m >= 0; m--) free(titles[m]);
       free(titles);
       free(index_buf);
       exit(EXIT_FAILURE);
@@ -420,6 +421,7 @@ void list_passwords(const char* index_path) {
     fputs(titles[n], stdout);
     fputs("\n", stdout);
   }
+  for (int m = lines - 1; m >= 0; m--) free(titles[m]);
   free(titles);
 }
 
@@ -453,12 +455,7 @@ void rm_password(const char* index_path, char* file_path) {
     titles[n] = calloc(TITLE_LEN, sizeof(char));
     if (! titles[n]) {
       fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-      unsigned int m = n - 1;
-      while (m >= 0) {
-        free(titles[m]);
-        m--;
-      }
-      /* Freeing memory twice is undefined behaviour... */
+      for (int m = n; m >= 0; m--) free(titles[m]);
       free(titles);
       free(index_buf);
       exit(EXIT_FAILURE);
@@ -486,11 +483,7 @@ void rm_password(const char* index_path, char* file_path) {
     filenames[n] = calloc(RANDSTR_LEN, sizeof(char));
     if (! filenames[n]) {
       fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-      unsigned int m = n - 1;
-      while (m >= 0) {
-        free(filenames[m]);
-        m--;
-      }
+      for (int m = n; m >= 0; m--) free(filenames[m]);
       free(filenames);
       free(index_buf);
       exit(EXIT_FAILURE);
@@ -511,10 +504,12 @@ void rm_password(const char* index_path, char* file_path) {
   else {
     fputs("Failed to delete selected password file. Aborting.\n", stdout);
     free(index_buf);
+    for (int m = lines - 1; m >= 0; m--) free(filenames[m]);
     free(filenames);
     exit(EXIT_FAILURE);
   }
   /* Entry is deleted from index file */
+  for (int m = lines - 1; m >= 0; m--) free(filenames[m]);
   free(filenames);
   /* Index file encryption */
   if (encrypt(index_path, index_buf, index_len) != 0) {
@@ -527,7 +522,6 @@ void rm_password(const char* index_path, char* file_path) {
 void get_password(const char* index_path, char* file_path) {
   size_t index_len = ((size_t)get_file_size(index_path) - crypto_secretbox_MACBYTES)/sizeof(char);
   char* index_buf = calloc(index_len, sizeof(char));
-
   if (! index_buf) {
     fputs("Failed to allocate needed memory for reading index file. Aborting.", stdout);
     exit(EXIT_FAILURE);
@@ -542,6 +536,7 @@ void get_password(const char* index_path, char* file_path) {
       lines++;
     }
   }
+  /* Allocating memory on the heap for password entry titles */
   char** titles = calloc(lines, sizeof(char));
   if (! titles) {
     fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
@@ -553,25 +548,45 @@ void get_password(const char* index_path, char* file_path) {
     titles[n] = calloc(TITLE_LEN, sizeof(char));
     if (! titles[n]) {
       fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
-      unsigned int m = n - 1;
-      while (m >= 0) {
-        free(titles[m]);
-        m--;
-      }
+      for (int m = n; m >= 0; m--) free(titles[m]);
       free(titles);
       free(index_buf);
       exit(EXIT_FAILURE);
     }
   }
+  /* End of allocation and error checking */
   get_titles_from_index(titles, lines, index_buf, index_len);
-  free(index_buf);
   for (unsigned int n = 0; n < lines; n++) {
     fputs(titles[n], stdout);
     fputs("\n", stdout);
   }
   /* User selects entry */
   unsigned int sel = get_entry_from_user(titles, lines);
+  for (int m = lines - 1; m >= 0; m--) free(titles[m]);
   free(titles);
+  /* Allocating memory on the heap for randomized filenames */
+  char** filenames = calloc(lines, sizeof(char));
+  if (! filenames) {
+    fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+    free(filenames);
+    free(index_buf);
+    exit(EXIT_FAILURE);
+  }
+  for (unsigned int n = 0; n < lines; n++) {
+    filenames[n] = calloc(TITLE_LEN, sizeof(char));
+    if (! filenames[n]) {
+      fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
+      for (int m = n; m >= 0; m--) free(filenames[m]);
+      free(filenames);
+      free(index_buf);
+      exit(EXIT_FAILURE);
+    }
+  }
+  /* End of allocation and error checking */
+  /* We get the actual filenames now, and put them in filenames[] */
+  get_filenames_from_index(filenames, lines, index_buf, index_len);
+  /* And concatenate the right filename to file_path, so now we can actually decrypt the right file */
+  snprintf(file_path + strlen(file_path), PATH_LEN - strlen(file_path), "%s", filenames[sel]);
   /* Password file decryption */
   size_t file_len = ((size_t)get_file_size(file_path) - crypto_secretbox_MACBYTES)/sizeof(char);
   char* file_buf = calloc(file_len, sizeof(char));
@@ -581,6 +596,7 @@ void get_password(const char* index_path, char* file_path) {
     exit(EXIT_FAILURE);
   }
   /* Password is printed to stdout. I need to check if this buffer is null terminated or not */
+  free(index_buf);
   fputs(file_buf, stdout);
   free(file_buf);
 }
@@ -607,13 +623,13 @@ int main(int argc, char *argv[]) {
   int get = strncmp(argv[1], "get", 5);
   char home_path[100] = {0};
   char dir_path[200] = {0};
-  char index_path[300] = {0};
-  char file_path[300] = {0};
+  char index_path[PATH_LEN] = {0};
+  char file_path[PATH_LEN] = {0};
 
   snprintf(file_path, 300, "%s%s", dir_path, "/");
   snprintf(home_path, 100, "%s", getenv("HOME"));
   snprintf(dir_path, 200, "%s", getenv("CITPASS_DIR"));
-  if (! (strncmp(dir_path, "", 200))) snprintf(dir_path, 200, "%s%s", home_path, "/.local/share/citpass");
+  if (! (strncmp(dir_path, "(null)", 200))) snprintf(dir_path, 200, "%s%s", home_path, "/.local/share/citpass");
   snprintf(index_path, 300, "%s%s", dir_path, "/index");
 
   switch (argc) {
