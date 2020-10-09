@@ -326,7 +326,7 @@ void add_password(const char* index_path, char* file_path) {
    * I want is some junk to put as a filename, it's not a mission critical task */
   srand(time(0));
   rand_junk_str(rand_str, RANDSTR_LEN);
-  snprintf(file_path + strlen(file_path), sizeof(file_path) - strlen(file_path), "%s", rand_str);
+  snprintf(file_path + strlen(file_path), PATH_LEN - strlen(file_path), "%s", rand_str);
 
   char title[TITLE_LEN] = {0};
   char password[PASS_LEN] = {0};
@@ -357,7 +357,6 @@ void add_password(const char* index_path, char* file_path) {
   char entry[entry_len];
   /* snprintf() however does include the null byte, even when writing entry_len characters to entry */
   snprintf(entry, entry_len, "%s%s%s%s%s%s%s%s%s", title, "\n", password, "\n", username, "\n", url, "\n", notes);
-  fputs(file_path, stdout);
   if (encrypt(file_path, entry, entry_len) != 0) {
     fputs("Unable to encrypt password file. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
@@ -626,11 +625,11 @@ int main(int argc, char *argv[]) {
   char index_path[PATH_LEN] = {0};
   char file_path[PATH_LEN] = {0};
 
-  snprintf(file_path, 300, "%s%s", dir_path, "/");
   snprintf(home_path, 100, "%s", getenv("HOME"));
   snprintf(dir_path, 200, "%s", getenv("CITPASS_DIR"));
   if (! (strncmp(dir_path, "(null)", 200))) snprintf(dir_path, 200, "%s%s", home_path, "/.local/share/citpass");
-  snprintf(index_path, 300, "%s%s", dir_path, "/index");
+  snprintf(file_path, PATH_LEN, "%s%s", dir_path, "/");
+  snprintf(index_path, PATH_LEN, "%s%s", dir_path, "/index");
 
   switch (argc) {
   case 2:
