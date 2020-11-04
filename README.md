@@ -59,7 +59,7 @@ and the cherry on top is that it requires systemd. Since I've already said Bash 
 can guess correctly what's my opinion on systemd, so let's not get into that.
 
 About the second point, I'm aware there's [tpm](https://github.com/nmeum/tpm/), as well as [spm](https://notabug.org/kl3/spm/),
-and a myriad other small/smaller password managers written in POSIX shell. Most of them, however, have
+and a myriad other small/smaller password managers written in various scripting languages. Most of them, however, have
 the same "flawed" defaults, in the way I described in the first point. If, ultimately, I give up writing
 this utility, I may rewrite it in POSIX shell, making use of programs like grep/ripgrep and gpg.
 
@@ -72,9 +72,10 @@ a useful program (to me), and I didn't want to write something that has been don
 Run time dependencies are glibc and libsodium. I'll make sure this program doesn't specifically depend
 on glibc, don't think that'll be hard.
 
-Compile time dependencies are GCC, Make, glibc, and libsodium.
+Compile time dependencies are GCC, Make, glibc, and libsodium. Make sure you install header files for
+glibc and libsodium, if you're in a distribution like Debian which packages these files separately.
 
-In your shell, change directory to the source directory, and run
+In your shell, change to the source directory, and run
 
 ```
 $ make
