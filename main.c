@@ -1,13 +1,10 @@
 #define _POSIX_C_SOURCE 200809L
 /* C standard library, part of glibc */
-#include <limits.h>
 #include <stdio.h> /* fputs, fgets... */
-#include <stdlib.h> /* File I/O */
 #include <string.h> /* String manipulation */
 #include <time.h> /* Initializing seed for random generation */
 /* C POSIX library, part of glibc */
 #include <sys/stat.h> /* Creating folders */
-#include <sys/types.h>
 #include <termios.h> /* Telling the terminal to not show input */
 #include <unistd.h>
 /* Libsodium */
@@ -251,6 +248,7 @@ int encrypt(const char* dest_file_path, const char* message, const size_t messag
   return 0;
 }
 
+/* File decryption is always failing because a different salt is used every time */
 int decrypt(const char* src_file_path, const char* message, const size_t message_len) {
   unsigned char salt[crypto_pwhash_SALTBYTES] = {0};
   unsigned char key[crypto_secretbox_KEYBYTES] = {0};
@@ -394,7 +392,7 @@ void list_passwords(const char* index_path) {
       lines++;
     }
   }
-   /* We allocate the first "column", of the 2D char array, */
+  /* We allocate the first "column", of the 2D char array, */
   char** titles = calloc(lines, sizeof(char));
   if (! titles) {
     fputs("Failed to allocate needed memory for reading index file. Aborting.\n", stdout);
@@ -609,17 +607,18 @@ int main(int argc, char *argv[]) {
     show_command_information(0);
     exit(EXIT_SUCCESS);
   }
+
   if (sodium_init() < 0) {
     /* Library couldn't be initialized, it is not safe to use */
     fputs("File encryption is not available. Aborting.\n", stdout);
     exit(EXIT_FAILURE);
   }
   
-  int init = strncmp(argv[1], "init", 5);
-  int add = strncmp(argv[1], "add", 5);
-  int ls = ((strncmp(argv[1], "ls", 5) == 0) || (strncmp(argv[1], "list", 5) == 0) || (strncmp(argv[1], "show", 5) == 0)) ? 0 : 1;
-  int rm = strncmp(argv[1], "rm", 5);
-  int get = strncmp(argv[1], "get", 5);
+  int init = strncmp(argv[1], "init", 20);
+  int add = strncmp(argv[1], "add", 20);
+  int ls = ((strncmp(argv[1], "ls", 20) == 0) || (strncmp(argv[1], "list", 20) == 0) || (strncmp(argv[1], "show", 20) == 0)) ? 0 : 1;
+  int rm = strncmp(argv[1], "rm", 20);
+  int get = strncmp(argv[1], "get", 20);
   char home_path[100] = {0};
   char dir_path[200] = {0};
   char index_path[PATH_LEN] = {0};
